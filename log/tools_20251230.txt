@@ -1,0 +1,165 @@
+2025-12-30 10:58:55.801 core.py:75 INFO 3.1.10 start!
+2025-12-30 10:58:56.444 usb_device.py:346 INFO 本地工具解压开始
+2025-12-30 10:58:56.633 ui_main.py:91 INFO 初始化主界面 (108, 67) (1224, 765)
+2025-12-30 10:58:57.159 ui_main.py:100 INFO 本地编码集utf-8
+2025-12-30 10:58:57.355 ui_main.py:299 INFO 当前语言设置: auto
+2025-12-30 10:58:57.357 ui_main.py:308 INFO 选取语言: zh_CN
+2025-12-30 10:58:57.442 usb_device.py:3389 INFO usb device ready!
+2025-12-30 10:58:57.869 usb_device.py:1510 INFO usb device trace
+2025-12-30 10:58:57.869 my_api.py:114 INFO [None, None]
+2025-12-30 10:58:57.870 usb_device.py:3399 INFO enter Trace
+2025-12-30 10:58:58.107 ui_main.py:460 INFO ui start
+2025-12-30 10:58:58.150 ui_main.py:2291 INFO 日志清理线程结束,共删除文件 0 个,共删除 0 M字节
+2025-12-30 10:58:59.095 ui_resource.py:79 INFO 已自动选择下载资源: v2025.12.23.09.zip
+2025-12-30 10:58:59.203 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 10:58:59.558 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 10:58:59.561 ui_resource.py:79 INFO 检测到有自动下载的资源, 开始自动下载
+2025-12-30 10:58:59.599 ui_resource.py:79 INFO 开始更新资源列表...
+2025-12-30 10:58:59.892 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 10:58:59.893 ui_resource.py:79 INFO 开始下载文件, 共计 1 个文件
+2025-12-30 10:58:59.895 ui_resource.py:320 INFO 开始下载文件: v2025.12.23.09.zip -> http://sh.air32.cn:10888/files/public/soc_script/v2025.12.23.09.zip
+2025-12-30 10:59:00.246 ui_resource.py:79 INFO 下载完成: v2025.12.23.09.zip - 耗时: 0.35秒
+2025-12-30 10:59:00.249 ui_resource.py:79 INFO 开始解压文件: resource\soc_script\v2025.12.23.09.zip -> resource\soc_script\v2025.12.23.09
+2025-12-30 10:59:00.253 my_api.py:310 INFO C:\Users\fzh\AppData\Local\Temp\_MEI183402\win32\7za.exe x "resource\soc_script\v2025.12.23.09.zip" -pLuat!1802s# -o"resource\soc_script\v2025.12.23.09" -aos
+2025-12-30 10:59:00.865 ui_resource.py:79 INFO 解压完成: resource\soc_script\v2025.12.23.09.zip
+2025-12-30 10:59:00.879 ui_resource.py:79 INFO 下载结果:  成功1个, 失败0个
+2025-12-30 10:59:00.881 ui_resource.py:79 INFO 下载总耗时: 0.97秒
+2025-12-30 10:59:06.269 usb_device.py:366 INFO 本地工具解压完成, 耗时: 9.83秒
+2025-12-30 10:59:12.805 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 10:59:13.092 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:02:01.750 ui_resource.py:167 INFO 刷新资源列表
+2025-12-30 11:02:03.787 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:02:04.070 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:02:47.449 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 11:04:02.798 ui_firmware.py:123 ERROR 没有选择文件
+2025-12-30 11:04:13.438 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:04:13.741 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:05:12.860 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 11:05:25.265 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:05:25.523 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:26:44.439 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 11:33:02.309 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:33:02.620 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:33:40.959 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 11:45:04.600 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:45:04.924 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 11:47:43.133 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 11:48:51.152 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 11:48:51.459 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 12:11:52.724 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 12:12:20.640 usb_device.py:1558 INFO usb device download
+2025-12-30 12:12:20.641 my_api.py:114 INFO [None, None]
+2025-12-30 12:12:20.641 usb_device.py:3408 INFO quit Trace
+2025-12-30 12:12:20.642 usb_device.py:3410 INFO enter download
+2025-12-30 12:12:20.659 ui_firmware.py:116 INFO 准备下载
+2025-12-30 12:12:20.672 ui_firmware.py:116 INFO 解析固件中
+2025-12-30 12:12:20.848 ui_firmware.py:116 INFO 下载准备中
+2025-12-30 12:12:20.861 ui_firmware.py:116 INFO 等待模块接入
+2025-12-30 12:12:20.865 soc.py:494 INFO _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\air101_flash.exe -ds 1152000 -ws 115200 -c COM3 -rs rts -dl _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\all.fls
+2025-12-30 12:12:20.866 soc.py:497 INFO 启动进程, GoGoGo
+2025-12-30 12:12:20.876 ui_firmware.py:116 INFO 已检测到设备, 开始烧录
+2025-12-30 12:12:20.901 soc.py:500 INFO 启动进程, 完成, 等待输出
+2025-12-30 12:12:20.976 soc.py:504 INFO b"'_temp\\soc\\download\\LuatOS-SoC_ESP32C3_V0001-RC1\\air101_flash.exe' \xb2\xbb\xca\xc7\xc4\xda\xb2\xbf\xbb\xf2\xcd\xe2\xb2\xbf\xc3\xfc\xc1\xee\xa3\xac\xd2\xb2\xb2\xbb\xca\xc7\xbf\xc9\xd4\xcb\xd0\xd0\xb5\xc4\xb3\xcc\xd0\xf2\r\n"
+2025-12-30 12:12:20.976 soc.py:504 INFO b'\xbb\xf2\xc5\xfa\xb4\xa6\xc0\xed\xce\xc4\xbc\xfe\xa1\xa3\r\n'
+2025-12-30 12:15:20.849 usb_device.py:1485 ERROR 模块通讯超时
+2025-12-30 12:15:20.899 usb_device.py:1510 INFO usb device trace
+2025-12-30 12:15:20.954 ui_firmware.py:123 ERROR 模块通讯超时
+2025-12-30 12:15:21.410 usb_device.py:3412 INFO quit download
+2025-12-30 12:15:21.411 usb_device.py:3399 INFO enter Trace
+2025-12-30 12:15:21.412 usb_device.py:2689 INFO sleep 0.10804510116577148 sec
+2025-12-30 12:15:21.413 my_api.py:114 INFO [None, None]
+2025-12-30 12:15:21.414 usb_device.py:2693 INFO sleep done
+2025-12-30 14:57:00.039 my_api.py:114 INFO [None, None]
+2025-12-30 14:57:00.039 usb_device.py:1504 INFO usb device sleep
+2025-12-30 14:57:00.040 my_api.py:114 INFO [None, None]
+2025-12-30 14:57:00.042 usb_device.py:3408 INFO quit Trace
+2025-12-30 14:57:00.147 my_api.py:114 INFO [None, None]
+2025-12-30 14:57:00.148 host_device.py:506 INFO task quit
+2025-12-30 14:57:00.148 my_api.py:114 INFO [None, None]
+2025-12-30 14:57:00.149 usb_device.py:3420 INFO task quit
+2025-12-30 14:57:00.365 core.py:220 INFO event loop closed
+2025-12-30 14:57:01.665 core.py:245 INFO end!
+2025-12-30 16:56:19.587 core.py:75 INFO 3.1.10 start!
+2025-12-30 16:56:20.509 usb_device.py:346 INFO 本地工具解压开始
+2025-12-30 16:56:20.838 ui_main.py:91 INFO 初始化主界面 (108, 67) (1224, 765)
+2025-12-30 16:56:21.866 usb_device.py:3389 INFO usb device ready!
+2025-12-30 16:56:21.910 ui_main.py:100 INFO 本地编码集utf-8
+2025-12-30 16:56:22.277 ui_main.py:299 INFO 当前语言设置: auto
+2025-12-30 16:56:22.279 ui_main.py:308 INFO 选取语言: zh_CN
+2025-12-30 16:56:23.210 my_api.py:114 INFO [None, None]
+2025-12-30 16:56:23.210 usb_device.py:1510 INFO usb device trace
+2025-12-30 16:56:23.210 usb_device.py:3399 INFO enter Trace
+2025-12-30 16:56:23.524 ui_main.py:460 INFO ui start
+2025-12-30 16:56:23.544 ui_main.py:2291 INFO 日志清理线程结束,共删除文件 0 个,共删除 0 M字节
+2025-12-30 16:56:24.847 ui_resource.py:79 INFO 资源列表已加载, 共计 690 个文件资源
+2025-12-30 16:56:25.224 ui_resource.py:79 INFO 可用镜像源: 2个
+2025-12-30 16:56:31.394 usb_device.py:366 INFO 本地工具解压完成, 耗时: 10.88秒
+2025-12-30 16:56:31.670 ui_resource.py:66 INFO 资源管理窗口关闭
+2025-12-30 16:56:38.617 my_api.py:114 INFO [None, None]
+2025-12-30 16:56:41.689 usb_device.py:1504 INFO usb device sleep
+2025-12-30 16:56:41.690 my_api.py:114 INFO [None, None]
+2025-12-30 16:56:41.690 my_api.py:114 INFO [None, None]
+2025-12-30 16:56:41.691 usb_device.py:3408 INFO quit Trace
+2025-12-31 09:15:53.668 usb_device.py:1546 INFO uart download com COM3
+2025-12-31 09:15:53.669 usb_device.py:1558 INFO usb device download
+2025-12-31 09:15:53.670 my_api.py:114 INFO [None, None]
+2025-12-31 09:15:53.671 usb_device.py:3410 INFO enter download
+2025-12-31 09:15:53.684 ui_firmware.py:116 INFO 准备下载
+2025-12-31 09:15:53.710 ui_firmware.py:116 INFO 解析固件中
+2025-12-31 09:15:53.875 ui_firmware.py:116 INFO 下载准备中
+2025-12-31 09:15:53.888 ui_firmware.py:116 INFO 等待模块接入
+2025-12-31 09:15:53.893 soc.py:494 INFO _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\air101_flash.exe -ds 1152000 -ws 115200 -c COM3 -rs rts -dl _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\all.fls
+2025-12-31 09:15:53.893 soc.py:497 INFO 启动进程, GoGoGo
+2025-12-31 09:15:53.919 ui_firmware.py:116 INFO 已检测到设备, 开始烧录
+2025-12-31 09:15:53.936 soc.py:500 INFO 启动进程, 完成, 等待输出
+2025-12-31 09:15:54.027 soc.py:504 INFO b"'_temp\\soc\\download\\LuatOS-SoC_ESP32C3_V0001-RC1\\air101_flash.exe' \xb2\xbb\xca\xc7\xc4\xda\xb2\xbf\xbb\xf2\xcd\xe2\xb2\xbf\xc3\xfc\xc1\xee\xa3\xac\xd2\xb2\xb2\xbb\xca\xc7\xbf\xc9\xd4\xcb\xd0\xd0\xb5\xc4\xb3\xcc\xd0\xf2\r\n"
+2025-12-31 09:15:54.028 soc.py:504 INFO b'\xbb\xf2\xc5\xfa\xb4\xa6\xc0\xed\xce\xc4\xbc\xfe\xa1\xa3\r\n'
+2025-12-31 09:18:53.876 usb_device.py:1485 ERROR 模块通讯超时
+2025-12-31 09:18:53.935 usb_device.py:1510 INFO usb device trace
+2025-12-31 09:18:53.954 ui_firmware.py:123 ERROR 模块通讯超时
+2025-12-31 09:18:54.639 usb_device.py:3412 INFO quit download
+2025-12-31 09:18:54.640 usb_device.py:3399 INFO enter Trace
+2025-12-31 09:18:54.643 my_api.py:114 INFO [None, None]
+2025-12-31 09:18:54.643 usb_device.py:2704 INFO search com done!
+2026-01-01 10:52:18.670 net_main.py:260 ERROR 
+Traceback (most recent call last):
+  File "aiohttp\connector.py", line 999, in _create_direct_connection
+  File "aiohttp\connector.py", line 865, in _resolve_host
+  File "aiohttp\resolver.py", line 36, in resolve
+  File "asyncio\base_events.py", line 792, in getaddrinfo
+  File "concurrent\futures\thread.py", line 57, in run
+  File "socket.py", line 752, in getaddrinfo
+socket.gaierror: [Errno 11004] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "net_main.py", line 221, in dt_report_update
+  File "aiohttp\client.py", line 521, in _request
+  File "aiohttp\connector.py", line 535, in connect
+  File "aiohttp\connector.py", line 892, in _create_connection
+  File "aiohttp\connector.py", line 1011, in _create_direct_connection
+aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host luatos.com:443 ssl:default [getaddrinfo failed]
+
+2026-01-01 10:57:18.994 net_main.py:260 ERROR 
+Traceback (most recent call last):
+  File "aiohttp\connector.py", line 999, in _create_direct_connection
+  File "aiohttp\connector.py", line 865, in _resolve_host
+  File "aiohttp\resolver.py", line 36, in resolve
+  File "asyncio\base_events.py", line 792, in getaddrinfo
+  File "concurrent\futures\thread.py", line 57, in run
+  File "socket.py", line 752, in getaddrinfo
+socket.gaierror: [Errno 11004] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "net_main.py", line 221, in dt_report_update
+  File "aiohttp\client.py", line 521, in _request
+  File "aiohttp\connector.py", line 535, in connect
+  File "aiohttp\connector.py", line 892, in _create_connection
+  File "aiohttp\connector.py", line 1011, in _create_direct_connection
+aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host luatos.com:443 ssl:default [getaddrinfo failed]
+
+2026-01-01 11:01:21.802 usb_device.py:1504 INFO usb device sleep
+2026-01-01 11:01:21.802 my_api.py:114 INFO [None, None]

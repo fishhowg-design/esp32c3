@@ -1,0 +1,6 @@
+组件	SuperMini引脚	说明	
+组件	GPIO 2			设置为 INPUT_PULLUP	
+组件	GND				击中时 A 与 B 接通，引脚电平变低	
+组件	GPIO 4			串联 220Ω 电阻，击中时亮起	
+组件	GPIO 5			击中时鸣叫	
+组件	GPIO 10			蓝牙连接成功时长亮，未连接时熄灭	

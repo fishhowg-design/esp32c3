@@ -1,0 +1,102 @@
+2026-01-01 11:47:03.205 core.py:75 INFO 3.1.10 start!
+2026-01-01 11:47:05.260 usb_device.py:346 INFO 本地工具解压开始
+2026-01-01 11:47:05.513 ui_main.py:91 INFO 初始化主界面 (108, 67) (1224, 765)
+2026-01-01 11:47:06.077 ui_main.py:100 INFO 本地编码集utf-8
+2026-01-01 11:47:06.394 ui_main.py:299 INFO 当前语言设置: auto
+2026-01-01 11:47:06.394 ui_main.py:308 INFO 选取语言: zh_CN
+2026-01-01 11:47:06.927 ui_main.py:460 INFO ui start
+2026-01-01 11:47:06.949 ui_main.py:2291 INFO 日志清理线程结束,共删除文件 0 个,共删除 0 M字节
+2026-01-01 11:47:07.573 ui_resource.py:79 INFO 已自动选择下载资源: v2025.12.31.22.zip
+2026-01-01 11:47:07.686 ui_resource.py:79 INFO 资源列表已加载, 共计 708 个文件资源
+2026-01-01 11:47:07.895 usb_device.py:3389 INFO usb device ready!
+2026-01-01 11:47:07.969 ui_resource.py:79 INFO 可用镜像源: 2个
+2026-01-01 11:47:07.971 ui_resource.py:79 INFO 检测到有自动下载的资源, 开始自动下载
+2026-01-01 11:47:08.006 ui_resource.py:79 INFO 开始更新资源列表...
+2026-01-01 11:47:08.264 ui_resource.py:79 INFO 可用镜像源: 2个
+2026-01-01 11:47:08.266 ui_resource.py:79 INFO 开始下载文件, 共计 1 个文件
+2026-01-01 11:47:08.268 ui_resource.py:320 INFO 开始下载文件: v2025.12.31.22.zip -> http://sh.air32.cn:10888/files/public/soc_script/v2025.12.31.22.zip
+2026-01-01 11:47:08.502 ui_resource.py:79 INFO 下载完成: v2025.12.31.22.zip - 耗时: 0.23秒
+2026-01-01 11:47:08.505 ui_resource.py:79 INFO 开始解压文件: resource\soc_script\v2025.12.31.22.zip -> resource\soc_script\v2025.12.31.22
+2026-01-01 11:47:08.507 my_api.py:310 INFO C:\Users\fzh\AppData\Local\Temp\_MEI378082\win32\7za.exe x "resource\soc_script\v2025.12.31.22.zip" -pLuat!1802s# -o"resource\soc_script\v2025.12.31.22" -aos
+2026-01-01 11:47:09.086 ui_resource.py:79 INFO 解压完成: resource\soc_script\v2025.12.31.22.zip
+2026-01-01 11:47:09.099 ui_resource.py:79 INFO 下载结果:  成功1个, 失败0个
+2026-01-01 11:47:09.102 ui_resource.py:79 INFO 下载总耗时: 0.82秒
+2026-01-01 11:47:15.586 usb_device.py:366 INFO 本地工具解压完成, 耗时: 10.33秒
+2026-01-01 11:47:19.715 ui_resource.py:79 INFO 资源列表已加载, 共计 708 个文件资源
+2026-01-01 11:47:19.926 ui_resource.py:79 INFO 可用镜像源: 2个
+2026-01-01 11:47:22.869 ui_resource.py:66 INFO 资源管理窗口关闭
+2026-01-01 11:47:45.138 usb_device.py:1546 INFO uart download com COM5
+2026-01-01 11:47:45.143 usb_device.py:1558 INFO usb device download
+2026-01-01 11:47:45.143 my_api.py:114 INFO [None, None]
+2026-01-01 11:47:45.145 usb_device.py:3410 INFO enter download
+2026-01-01 11:47:45.152 ui_firmware.py:116 INFO 准备下载
+2026-01-01 11:47:45.158 ui_firmware.py:116 INFO 解析固件中
+2026-01-01 11:47:45.272 ui_firmware.py:116 INFO 下载准备中
+2026-01-01 11:47:45.282 ui_firmware.py:116 INFO 等待模块接入
+2026-01-01 11:47:45.313 soc.py:494 INFO _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\air101_flash.exe -ds 1152000 -ws 115200 -c COM5 -rs rts -dl _temp\soc\download\LuatOS-SoC_ESP32C3_V0001-RC1\all.fls
+2026-01-01 11:47:45.313 soc.py:497 INFO 启动进程, GoGoGo
+2026-01-01 11:47:45.316 ui_firmware.py:116 INFO 已检测到设备, 开始烧录
+2026-01-01 11:47:45.339 soc.py:500 INFO 启动进程, 完成, 等待输出
+2026-01-01 11:47:45.382 soc.py:504 INFO b"'_temp\\soc\\download\\LuatOS-SoC_ESP32C3_V0001-RC1\\air101_flash.exe' \xb2\xbb\xca\xc7\xc4\xda\xb2\xbf\xbb\xf2\xcd\xe2\xb2\xbf\xc3\xfc\xc1\xee\xa3\xac\xd2\xb2\xb2\xbb\xca\xc7\xbf\xc9\xd4\xcb\xd0\xd0\xb5\xc4\xb3\xcc\xd0\xf2\r\n"
+2026-01-01 11:47:45.382 soc.py:504 INFO b'\xbb\xf2\xc5\xfa\xb4\xa6\xc0\xed\xce\xc4\xbc\xfe\xa1\xa3\r\n'
+2026-01-01 11:50:45.273 usb_device.py:1485 ERROR 模块通讯超时
+2026-01-01 11:50:45.290 usb_device.py:1510 INFO usb device trace
+2026-01-01 11:50:45.305 ui_firmware.py:123 ERROR 模块通讯超时
+2026-01-01 11:50:48.318 usb_device.py:3412 INFO quit download
+2026-01-01 11:50:48.318 usb_device.py:3399 INFO enter Trace
+2026-01-01 11:50:48.323 my_api.py:114 INFO [None, None]
+2026-01-01 11:50:48.323 usb_device.py:2704 INFO search com done!
+2026-01-01 11:50:48.568 ui_main.py:996 INFO None is full or not exsit, create new
+2026-01-01 11:50:49.600 usb_device.py:1495 ERROR error -1
+2026-01-01 11:50:49.600 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:50:50.623 usb_device.py:1495 ERROR error -1
+2026-01-01 11:50:50.624 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:50:53.124 usb_device.py:1495 ERROR error -1
+2026-01-01 11:50:53.124 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:50:56.617 usb_device.py:1495 ERROR error -1
+2026-01-01 11:50:56.617 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:50:58.122 usb_device.py:1495 ERROR error -1
+2026-01-01 11:50:58.122 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:01.108 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:01.109 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:02.121 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:02.121 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:03.616 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:03.616 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:06.614 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:06.614 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:09.120 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:09.120 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:10.622 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:10.622 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:13.620 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:13.621 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:17.126 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:17.126 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:18.116 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:18.116 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:20.608 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:20.609 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:20.612 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:22.741 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:22.741 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:22.743 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:23.430 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:23.664 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:23.895 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:24.111 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:24.326 my_api.py:114 INFO [None, None]
+2026-01-01 11:51:25.743 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:25.743 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:28.248 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:28.249 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:30.239 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:30.239 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:31.243 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:31.243 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:32.248 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:32.248 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:33.237 usb_device.py:1495 ERROR error -1
+2026-01-01 11:51:33.238 usb_device.py:1495 ERROR log data not align 4byte
+2026-01-01 11:51:34.782 usb_device.py:1504 INFO usb device sleep
+2026-01-01 11:51:36.137 core.py:214 INFO event loop close timeout
