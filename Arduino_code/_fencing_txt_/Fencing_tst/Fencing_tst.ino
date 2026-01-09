@@ -127,12 +127,13 @@ void hitEvent() {
 
   redScore++;
   Serial.print("🎯【红方-击中】时间戳：");
-  Serial.print(millis());
+  String time = String(millis());  
+  Serial.print(time);
   Serial.print(" | 红方得分：");
   Serial.println(redScore);
 
   if (deviceConnected) {
-    String scoreData = "RED:" + String(redScore);
+    String scoreData = "time:"+ time +"|"+"RED:" + String(redScore);
     pCharacteristic->setValue(scoreData.c_str());
     pCharacteristic->notify();  // BLE主动通知，小程序实时接收得分
     Serial.println("📤【红方-蓝牙】上报得分：" + scoreData);
