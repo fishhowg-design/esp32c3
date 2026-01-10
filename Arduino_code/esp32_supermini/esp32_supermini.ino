@@ -4,11 +4,11 @@
 #include <BLE2902.h>
 
 // 引脚定义 - 完全不变，和你的原始代码一致
-#define FENCING_PIN     5    // 重剑信号采集GPIO
+#define FENCING_PIN     8    // 重剑信号采集GPI8
 #define DEBOUNCE_DELAY  20    // 消抖时间（20ms）重剑专用，无需修改
 #define LED_HIT         6    // D4：击中提示灯（GPIO18）
-#define    10    // D5：蓝牙连接状态灯（GPIO19）
-LED_BLUETOOTH
+#define LED_BLUETOOTH   10    // D5：蓝牙连接状态灯（GPIO19）
+
 // BLE蓝牙配置（红方专属，设备名正常生效）
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
