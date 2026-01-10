@@ -7,7 +7,7 @@
 #define FENCING_PIN     8    // 重剑信号采集GPI8
 #define DEBOUNCE_DELAY  20    // 消抖时间（20ms）重剑专用，无需修改
 #define LED_HIT         6    // D4：击中提示灯（GPIO18）
-#define LED_BLUETOOTH   10    // D5：蓝牙连接状态灯（GPIO19）
+#define LED_BLUETOOTH   10    // D5：蓝牙连接状态灯（GPIO10）
 
 // BLE蓝牙配置（红方专属，设备名正常生效）
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
