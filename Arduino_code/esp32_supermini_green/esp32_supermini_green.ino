@@ -10,10 +10,10 @@
 #define LED_BLUETOOTH   10    // 蓝牙连接状态灯
 #define BUZZER_PIN      7     // 蜂鸣器控制引脚（新增）
 
-// BLE蓝牙配置（红方专属，不变）
+// BLE蓝牙配置（绿方专属，不变）
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define DEVICE_NAME         "epee_red"
+#define DEVICE_NAME         "epee_green"
 
 // 状态变量 - 新增蜂鸣器状态
 bool hitState = false;
@@ -22,7 +22,7 @@ unsigned long lastDebounceTime = 0;
 unsigned long hitLedOnTime = 0;
 bool hitLedIsOn = false;
 bool buzzerIsOn = false; // 蜂鸣器开启状态
-int redScore = 0;
+int greenScore = 0;
 bool deviceConnected = false;
 
 // BLE相关变量
@@ -34,15 +34,15 @@ class MyServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     digitalWrite(LED_BLUETOOTH, HIGH);
-    Serial.println("✅【红方-蓝牙】手机小程序已连接");
+    Serial.println("✅【绿方-蓝牙】手机小程序已连接");
   };
 
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     digitalWrite(LED_BLUETOOTH, LOW);
-    Serial.println("❌【红方-蓝牙】手机小程序已断开");
+    Serial.println("❌【绿方-蓝牙】手机小程序已断开");
     pServer->getAdvertising()->start();
-    Serial.println("✅【红方-蓝牙】重新广播，等待重连");
+    Serial.println("✅【绿方-蓝牙】重新广播，等待重连");
   }
 };
 
@@ -59,7 +59,7 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println("==================================");
-  Serial.println("=== 重剑计分器（红方-ESP32C3完整版）初始化 ===");
+  Serial.println("=== 重剑计分器（绿方-ESP32C3完整版）初始化 ===");
   Serial.println("==================================");
 
   BLEDevice::init(DEVICE_NAME);
@@ -74,14 +74,14 @@ void setup() {
                       BLECharacteristic::PROPERTY_NOTIFY
                     );
   pCharacteristic->addDescriptor(new BLE2902());
-  pCharacteristic->setValue("RED:0");
+  pCharacteristic->setValue("GREEN:0");
   pService->start();
 
   pServer->getAdvertising()->start();
 
-  Serial.println("📶【红方-蓝牙】广播启动成功，设备名：" DEVICE_NAME);
-  Serial.println("📡【红方-信号】GPIO8重剑采集就绪，等待击中");
-  Serial.println("🔔【红方-提示】GPIO7蜂鸣器+GPIO6指示灯就绪");
+  Serial.println("📶【绿方-蓝牙】广播启动成功，设备名：" DEVICE_NAME);
+  Serial.println("📡【绿方-信号】GPIO8重剑采集就绪，等待击中");
+  Serial.println("🔔【绿方-提示】GPIO7蜂鸣器+GPIO6指示灯就绪");
 }
 
 void loop() {
@@ -126,19 +126,19 @@ void hitEvent() {
   hitLedIsOn = true;
   buzzerIsOn = true;
 
-  redScore++;
-  Serial.print("🎯【红方-击中】时间戳：");
+  greenScore++;
+  Serial.print("🎯【绿方-击中】时间戳：");
   String time = String(millis());  
   Serial.print(time);
-  Serial.print(" | 红方得分：");
-  Serial.println(redScore);
+  Serial.print(" | 绿方得分：");
+  Serial.println(greenScore);
 
   if (deviceConnected) {
-    String scoreData = "time:"+ time +"|"+"RED:" + String(redScore);
+    String scoreData = "time:"+ time +"|"+"GREEN:" + String(greenScore);
     pCharacteristic->setValue(scoreData.c_str());
     pCharacteristic->notify();
-    Serial.println("📤【红方-蓝牙】上报得分：" + scoreData);
+    Serial.println("📤【绿方-蓝牙】上报得分：" + scoreData);
   } else {
-    Serial.println("⚠️【红方-蓝牙】未连接，得分暂存本地");
+    Serial.println("⚠️【绿方-蓝牙】未连接，得分暂存本地");
   }
 }
