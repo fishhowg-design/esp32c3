@@ -75,7 +75,19 @@ void setup() {
                     );
   pCharacteristic->addDescriptor(new BLE2902());
   pCharacteristic->setValue("GREEN:0");
+
+
+
   pService->start();
+
+//添加部分看看能不能解决问题
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID); // 广播服务UUID
+  pAdvertising->setScanResponse(true); // 开启扫描响应
+  pAdvertising->setName(DEVICE_NAME); // 这里的名称会作为Short Local Name广播
+/////////////////////
+
+  
 
   pServer->getAdvertising()->start();
 
