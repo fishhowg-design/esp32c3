@@ -9,7 +9,7 @@
 
 // ✅【修复】ESP32-C3 专属合法引脚定义 (全部可用，无GPIO20/21/12)
 #define LED_APP_CONN  2   // 小程序连接指示灯
-#define KEY_MAIN      9   // 主按键(1=连红,2=连绿,3=重置)
+#define KEY_MAIN      10   // 主按键(1=连红,2=连绿,3=重置)
 #define KEY_CONFIRM_RED 8 // 红方确认按键
 #define KEY_CONFIRM_GRN 7 // 绿方确认按键
 #define LED_BLUE1     1   // 红方连接指示灯-闪烁/常亮
@@ -41,6 +41,8 @@ const uint32_t CONN_TIMEOUT = 10000;
 const unsigned long KEY_DEB = 200;
 const unsigned long KEY_MAIN_INT = 300;
 const unsigned long LED_FLASH = 500;
+const unsigned long SCAN_TIMEOUT_MS = 15000;  // ✅新增：15秒扫描超时 (15000毫秒)
+bool scanTimeoutFlag = false;   // ✅新增：扫描超时标志位，标记本次是否超时停止
 
 // ✅【修复】全局变量优化+新增击中来源标识结构体
 BLEClient* pRed = nullptr;
@@ -79,6 +81,7 @@ enum ConnectTarget { NONE, RED, GRN };
 ConnectTarget currTgt = NONE;
 
 // 函数前置声明
+void scanTimeoutCheck();
 void setupBleNotify(BLEClient* pClient, bool isRedSide);
 void scanStart();
 void scanStop();
@@ -104,42 +107,113 @@ class MyServerCb : public BLEServerCallbacks {
 // BLE扫描回调-扫描红/绿方设备
 class MyScanCb : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice dev) {
-    if (!scanning) return;
+    // 提取设备所有核心信息，全部打印，调试必备
     String devName = dev.getName();
+    String devMac  = dev.getAddress().toString();
+    int    devRssi = dev.getRSSI();
+    bool   hasName = dev.haveName();
+    // ✅ 修复日志小错误：原日志打印的是devName，改为真实的扫描目标（红/绿/无），日志更准确
+    Serial.printf("[BLE扫描-调试] 📌 进入 BLEAdvertisedDeviceCallbacks() 函数 | 当前scanning状态：%s | 扫描目标：%s\n", scanning?"✅正在扫描":"❌未扫描", currTgt == RED ? "🔴红方" : (currTgt == GRN ? "🟢绿方" : "⚫无目标"));
+    // ====== 前置校验+基础日志【必看】：扫描状态+设备基础信息全打印 ======
 
+    if (!scanning) {
+      Serial.printf("[BLE回调-过滤] ⚠️ 扫描已停止，过滤本次设备广播 | 设备名：%s | MAC：%s\n", dev.getName().c_str(), dev.getAddress().toString().c_str());
+      return;
+    }
+   
+
+    Serial.printf("\n[BLE回调-发现设备] 📡 检测到BLE设备 → 名称：%s | MAC地址：%s | 信号强度：%d dBm | 有名称：%s\n",
+                  devName.isEmpty()?"【空名称/无广播名】":devName.c_str(),
+                  devMac.c_str(),//✅ 恢复你注释掉的MAC地址打印，调试必须看MAC
+                  devRssi,
+                  hasName?"✅是":"❌否");
+
+    // ====== 匹配条件前置校验日志：当前目标+设备名+指针状态，一目了然 ======
+    Serial.printf("[BLE回调-匹配校验] 📌 当前扫描目标：%s | 匹配设备名要求：%s | 红方指针状态：%s | 绿方指针状态：%s\n",
+                  currTgt == RED ? "🔴红方" : (currTgt == GRN ? "🟢绿方" : "⚫无目标"),
+                  currTgt == RED ? RED_DEV_NAME : (currTgt == GRN ? GRN_DEV_NAME : "无"),
+                  pRed == nullptr ? "✅空(可连接)" : "❌非空(已连接)",
+                  pGreen == nullptr ? "✅空(可连接)" : "❌非空(已连接)");
+
+    // ====== 红方设备匹配+连接逻辑【原逻辑不变+修复2个致命BUG+全流程日志】 ======
     if (currTgt == RED && devName == RED_DEV_NAME && pRed == nullptr) {
-      Serial.println("🔴 正在连接红方设备...");
+      Serial.println("══════════════════════════════");
+      Serial.println("[BLE回调-红方] 🔴 ✅ 满足红方连接条件 → 开始执行红方设备连接流程！");
+      Serial.printf("[BLE回调-红方] 🔴 待连接设备：名称=%s | MAC=%s | RSSI=%d dBm\n", RED_DEV_NAME, devMac.c_str(), devRssi);
+      
       pRed = BLEDevice::createClient();
-      if (pRed->connect(&dev)) {
-        setupBleNotify(pRed, true);
-        scanStop();
-        digitalWrite(LED_BLUE1, HIGH);
-        digitalWrite(LED_YELLOW, LOW);
-        timeoutFlag = false;
-        Serial.println("✅ 红方连接成功！");
-      } else {
-        Serial.println("❌ 红方连接失败");
-        delete pRed;
-        pRed = nullptr;
+      Serial.printf("[BLE回调-红方] 🔴 创建BLE客户端实例 → pRed指针状态：%s\n", pRed == nullptr ? "❌创建失败" : "✅创建成功");
+      
+      // ✅ 修复BUG1：空指针校验，防止创建失败后访问空指针触发崩溃
+      if(pRed != nullptr){
+        // ✅ 修复BUG2：用MAC地址创建永久BLEAddress对象连接，替代临时dev对象，彻底解决Load access fault
+        BLEAddress redDevAddr = dev.getAddress();
+        if (pRed->connect(redDevAddr)) {
+          Serial.println("[BLE回调-红方] 🔴 ✅ BLE底层连接成功！开始配置Notify通知回调...");
+          setupBleNotify(pRed, true);
+          scanStop(); // 调用你的停止扫描函数
+          // 指示灯状态更新日志
+          digitalWrite(LED_BLUE1, HIGH);
+          digitalWrite(LED_YELLOW, LOW);
+          timeoutFlag = false;
+          Serial.println("[BLE回调-红方] ✅✅✅ 红方设备连接+配置全部完成！✅✅✅");
+        } else {
+          Serial.println("[BLE回调-红方] 🔴 ❌ BLE底层连接失败！设备拒绝连接/超时/信号差");
+          delete pRed; // 释放内存
+          pRed = nullptr; // 重置指针
+          Serial.println("[BLE回调-红方] 🔴 ❌ 已释放红方客户端内存，指针重置为NULL");
+        }
+      }else{
+        // ✅ 新增日志：创建客户端失败的提示
+        Serial.println("[BLE回调-红方] 🔴 ❌ 创建BLE客户端失败！内存不足或BLE资源被占用");
       }
+      Serial.println("══════════════════════════════\n");
     }
 
+    // ====== 绿方设备匹配+连接逻辑【原逻辑不变+同样修复2个致命BUG+全流程日志】 ======
     if (currTgt == GRN && devName == GRN_DEV_NAME && pGreen == nullptr) {
-      Serial.println("🟢 正在连接绿方设备...");
+      Serial.println("══════════════════════════════");
+      Serial.println("[BLE回调-绿方] 🟢 ✅ 满足绿方连接条件 → 开始执行绿方设备连接流程！");
+      Serial.printf("[BLE回调-绿方] 🟢 待连接设备：名称=%s | MAC=%s | RSSI=%d dBm\n", GRN_DEV_NAME, devMac.c_str(), devRssi);
+      
       pGreen = BLEDevice::createClient();
-      if (pGreen->connect(&dev)) {
-        setupBleNotify(pGreen, false);
-        scanStop();
-        digitalWrite(LED_BLUE2, HIGH);
-        digitalWrite(LED_YELLOW, LOW);
-        timeoutFlag = false;
-        Serial.println("✅ 绿方连接成功！");
-      } else {
-        Serial.println("❌ 绿方连接失败");
-        delete pGreen;
-        pGreen = nullptr;
+      Serial.printf("[BLE回调-绿方] 🟢 创建BLE客户端实例 → pGreen指针状态：%s\n", pGreen == nullptr ? "❌创建失败" : "✅创建成功");
+      
+      // ✅ 修复BUG1：空指针校验
+      if(pGreen != nullptr){
+        // ✅ 修复BUG2：用MAC地址连接，彻底解决崩溃
+        BLEAddress greenDevAddr = dev.getAddress();
+        if (pGreen->connect(greenDevAddr)) {
+          Serial.println("[BLE回调-绿方] 🟢 ✅ BLE底层连接成功！开始配置Notify通知回调...");
+          setupBleNotify(pGreen, false);
+          scanStop(); // 调用你的停止扫描函数
+          // 指示灯状态更新日志
+          digitalWrite(LED_BLUE2, HIGH);
+          digitalWrite(LED_YELLOW, LOW);
+          timeoutFlag = false;
+          Serial.println("[BLE回调-绿方] ✅✅✅ 绿方设备连接+配置全部完成！✅✅✅");
+        } else {
+          Serial.println("[BLE回调-绿方] 🟢 ❌ BLE底层连接失败！设备拒绝连接/超时/信号差");
+          delete pGreen; // 释放内存
+          pGreen = nullptr; // 重置指针
+          Serial.println("[BLE回调-绿方] 🟢 ❌ 已释放绿方客户端内存，指针重置为NULL");
+        }
+      }else{
+        // ✅ 新增日志：创建客户端失败的提示
+        Serial.println("[BLE回调-绿方] 🟢 ❌ 创建BLE客户端失败！内存不足或BLE资源被占用");
       }
+      Serial.println("══════════════════════════════\n");
     }
+
+    // ====== 未匹配到目标的补充日志【调试关键】：告诉你为什么没连接 ======
+    if( !(currTgt == RED && devName == RED_DEV_NAME && pRed == nullptr) && !(currTgt == GRN && devName == GRN_DEV_NAME && pGreen == nullptr) ){
+      Serial.printf("[BLE回调-过滤] ⚪ 本次设备不满足连接条件 → 原因：目标=%s | 设备名=%s | 红指针=%s | 绿指针=%s\n",
+                    currTgt == RED ? "红" : (currTgt == GRN ? "绿" : "无"),
+                    devName.c_str(),
+                    pRed==nullptr?"空":"非空",
+                    pGreen==nullptr?"空":"非空");
+    }
+    Serial.flush(); // 强制刷出所有日志，防止丢失
   }
 };
 
@@ -226,6 +300,7 @@ void hwInit() {
 // 主按键处理逻辑 (1次=红,2次=绿,3次=重置)
 void handleKeyMain() {
   int state = digitalRead(KEY_MAIN);
+  //Serial.printf("[主按键调试] 读取按键电平状态: %d (LOW=按下, HIGH=松开)\n", state);
   if (state == LOW && millis() - lastKeyMain >= KEY_DEB) {
     lastKeyMain = millis();
     keyMainCnt++;
@@ -236,12 +311,31 @@ void handleKeyMain() {
     digitalWrite(LED_YELLOW, LOW);
     timeoutFlag = false;
     scanStop();
+    Serial.printf("进入switch");
     switch (keyMainCnt) {
-      case 1: currTgt = RED; scanStart(); break;
-      case 2: currTgt = GRN; scanStart(); break;
-      case 3: sysReset(); break;
-      default: Serial.println("❌ 按键次数无效"); currTgt = NONE; break;
+      case 1: 
+        currTgt = RED;
+         Serial.printf("[主按键调试] ✅ 按键1次 → 执行【连接红方】逻辑 | currTgt = RED | 调用 scanStart() 启动红方扫描\n");
+        scanStart();
+       
+        break;
+      case 2: 
+        currTgt = GRN;
+        Serial.printf("[主按键调试] ✅ 按键2次 → 执行【连接绿方】逻辑 | currTgt = GRN | 调用 scanStart() 启动绿方扫描\n");
+        scanStart();
+        
+        break;
+      case 3: 
+      Serial.printf("[主按键调试] ✅ 按键3次 → 执行【系统重置】逻辑 | 调用 sysReset() 全部状态清零\n");
+        sysReset();
+        
+        break;
+      default: 
+        Serial.printf("[主按键调试] ❌ 按键次数无效 → 次数：%d | 执行 currTgt = NONE\n", keyMainCnt);
+        currTgt = NONE; 
+        break;
     }
+    Serial.printf("出switch");
     keyMainCnt = 0;
   }
 }
@@ -335,25 +429,92 @@ void setupBleNotify(BLEClient* pClient, bool isRedSide) {
 }
 
 // BLE扫描启动
+String scaning = "";            // 你的扫描状态字符串（红方/绿方）
+
 void scanStart() {
-  if (scanning) return;
+  // ========== 【日志1】进入函数+当前扫描状态预检 ==========
+  Serial.printf("[BLE扫描-调试] 📌 进入 scanStart() 函数 | 当前scanning状态：%s | 扫描目标：%s\n", scanning?"✅正在扫描":"❌未扫描", scaning.c_str());
+  
+  // 1. 修复BUG1：原判断逻辑无日志，不知道是否触发「重复扫描拦截」
+  if (scanning) {
+    Serial.printf("[BLE扫描-警告] ⚠️ 当前正在扫描中，拒绝重复调用 scanStart()，直接退出函数！\n");
+    Serial.flush(); // 强制刷出日志，防止丢失
+    return;
+  }
+
+  // ========== 【日志2】通过预检，开始初始化BLE扫描参数 ==========
+  Serial.println("[BLE扫描-信息] ✅ 通过状态预检，开始初始化BLE扫描配置...");
+
+  // 2. 获取BLE扫描实例
   pScan = BLEDevice::getScan();
+  if(pScan == NULL){
+    Serial.printf("[BLE扫描-错误] ❌ 获取BLE扫描实例失败 pScan = NULL，初始化失败！\n");
+    scanning = false;
+    Serial.flush();
+    return;
+  }
+  Serial.println("[BLE扫描-成功] ✔️ BLE扫描实例获取成功 pScan ✔️");
+
+  // 3. 设置扫描回调函数
   pScan->setAdvertisedDeviceCallbacks(new MyScanCb());
+  Serial.println("[BLE扫描-成功] ✔️ 已绑定扫描回调函数 MyScanCb() ✔️");
+
+  // 4. 设置主动扫描（必须开启，扫描BLE从机必备）
   pScan->setActiveScan(true);
-  pScan->setInterval(100);
-  pScan->setWindow(90);
-  pScan->start(0);
-  scanning = true;
-  scanStartTime = millis();
-  Serial.println("🔍 BLE扫描已启动！");
+  Serial.printf("[BLE扫描-配置] ⚙️ 设置扫描模式：主动扫描 ActiveScan = true\n");
+
+  // 5. 设置BLE扫描的时间参数
+  pScan->setInterval(100);  // 扫描间隔 100ms
+  pScan->setWindow(90);     // 扫描窗口 90ms
+  Serial.printf("[BLE扫描-配置] ⚙️ 设置扫描参数 | 间隔：%d ms | 窗口：%d ms\n", 100, 90);
+
+  // ========== 【日志3】所有配置完成，启动扫描 ==========
+  Serial.println("[BLE扫描-执行] 🚀 配置全部完成，准备启动BLE无限时扫描...");
+  scanning = true;  // 标记为【正在扫描】
+  pScan->start(0);  // start(0) = 无限扫描，直到调用 stop() 才停止
+  
+  scanStartTime = millis(); // 记录扫描启动的时间戳
+
+  // ========== 【日志4】扫描启动成功 最终状态日志 ==========
+  Serial.printf("[BLE扫描-成功] 🎯 BLE扫描【%s】启动成功！扫描开始时间戳：%lu ms | 扫描模式：无限扫描\n", scaning.c_str(), scanStartTime);
+  Serial.println("---------------------------------------------------");
+  Serial.flush(); // 强制刷新串口缓冲区，确保所有日志都能打印出来，不丢失
+}
+
+void scanTimeoutCheck() {
+  // 只有【正在扫描】状态，才需要检测超时
+  if (scanning && pScan != NULL) {
+    unsigned long nowMs = millis();
+    // 核心判断：15秒超时条件
+    if (nowMs - scanStartTime >= SCAN_TIMEOUT_MS) {
+      // 执行超时停止操作
+      pScan->stop();                // ✅停止BLE扫描
+      pScan->clearResults();        // ✅清空扫描结果缓存，释放内存
+      scanTimeoutFlag = true;       // ✅标记本次扫描【超时停止】
+      scanning = false;             // ✅扫描状态置为 停止
+      
+      // ========== 超时报错日志【醒目】 ==========
+      Serial.println("\n=====================================");
+      Serial.printf("[BLE扫描-超时] ⏰ ⚠️ 【%s】扫描超时！已扫描满%d秒未找到目标设备，自动停止扫描\n", scaning.c_str(), SCAN_TIMEOUT_MS/1000);
+      Serial.println("=====================================\n");
+      Serial.flush();
+    }
+  }
 }
 
 // BLE扫描停止
 void scanStop() {
-  if (!scanning) return;
-  pScan->stop();
-  scanning = false;
-  Serial.println("🛑 BLE扫描已停止！");
+  Serial.println("\n[BLE扫描] ⏹️ 执行 scanStop() 停止扫描函数！");
+  if(scanning && pScan != NULL){
+    pScan->stop();                // 停止扫描
+    pScan->clearResults();        // 清空扫描结果缓存，释放内存
+    scanning = false;             // 重置扫描状态
+    scanTimeoutFlag = false;      // 重置超时标志
+    Serial.println("[BLE扫描] ✅ BLE扫描已停止 + 缓存已清空 + 状态已重置！");
+  } else {
+    Serial.println("[BLE扫描] ⚠️ 扫描未运行，无需停止！");
+  }
+  Serial.flush();
 }
 
 // ✅【优化】系统重置 - 释放内存+重置所有状态
@@ -473,6 +634,7 @@ void setup() {
 
 // 主循环
 void loop() {
+  scanTimeoutCheck();  // ✅必须加：15秒扫描超时检测，放在loop最顶部
   handleKeyMain();
   handleKeyConfirm();
   handleLedFlash();
