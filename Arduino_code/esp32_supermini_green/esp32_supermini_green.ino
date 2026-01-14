@@ -3,65 +3,67 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-// 引脚定义 - 完美适配ESP32C3 Supermini 无任何冲突
-#define FENCING_PIN     8    // 重剑信号采集GPIO（安全首选）
-#define DEBOUNCE_DELAY  20    // 重剑专用消抖时间
-#define LED_HIT         6    // 击中提示灯
-#define LED_BLUETOOTH   10    // 蓝牙连接状态灯
-#define BUZZER_PIN      7     // 蜂鸣器控制引脚（新增）
+// =====================【引脚定义 - 完美适配ESP32C3 Supermini 无冲突 与红方一致】=====================
+#define FENCING_PIN     8    // 重剑信号采集GPIO
+#define DEBOUNCE_DELAY  20    // 重剑专用消抖时间 最优值 无需修改
+#define LED_HIT         6    // 击中提示灯 GPIO6
+#define LED_BLUETOOTH   10    // 蓝牙连接状态灯 GPIO10
+#define BUZZER_PIN      7     // 蜂鸣器控制引脚 GPIO7
 
-// BLE蓝牙配置（绿方专属，不变）
+// =====================【BLE蓝牙配置 - 与红方完全一致 与接收端严格匹配 不可修改】=====================
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define DEVICE_NAME         "epee_green"
+#define DEVICE_NAME         "epee_green"  // ✅ 核心修改：绿方设备名
 
-// 状态变量 - 新增蜂鸣器状态
+// =====================【状态变量 - 对应绿方 修改标识 逻辑不变】=====================
 bool hitState = false;
 bool lastHitState = false;
 unsigned long lastDebounceTime = 0;
 unsigned long hitLedOnTime = 0;
 bool hitLedIsOn = false;
-bool buzzerIsOn = false; // 蜂鸣器开启状态
-int greenScore = 0;
+bool buzzerIsOn = false;
+int greenScore = 0;          // ✅ 绿方得分变量
 bool deviceConnected = false;
+static BLE2902 ble2902Desc;  // 解决内存泄漏 静态创建描述符【保留红方的优化】
 
-// BLE相关变量
+// =====================【BLE相关变量 - 与红方完全一致】=====================
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristic = NULL;
 
-// BLE连接回调类 不变
+/**
+ * @brief BLE连接回调类 - 日志文字改为绿方 逻辑完全不变
+ */
 class MyServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     digitalWrite(LED_BLUETOOTH, HIGH);
-    Serial.println("✅【绿方-蓝牙】手机小程序已连接");
+    Serial.println("✅【绿方-蓝牙】BLE计分主机 已成功连接！");
   };
 
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     digitalWrite(LED_BLUETOOTH, LOW);
-    Serial.println("❌【绿方-蓝牙】手机小程序已断开");
-    pServer->getAdvertising()->start();
-    Serial.println("✅【绿方-蓝牙】重新广播，等待重连");
+    Serial.println("❌【绿方-蓝牙】与BLE主机断开连接！");
+    BLEDevice::startAdvertising();
+    Serial.println("✅【绿方-蓝牙】重新开启广播，等待主机重连...");
   }
 };
 
 void setup() {
-  // 初始化所有引脚
   pinMode(LED_HIT, OUTPUT);
   pinMode(LED_BLUETOOTH, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT); // 蜂鸣器初始化
+  pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(LED_HIT, LOW);
   digitalWrite(LED_BLUETOOTH, LOW);
-  digitalWrite(BUZZER_PIN, LOW); // 蜂鸣器默认关闭
-
-  pinMode(FENCING_PIN, INPUT); // 重剑采集引脚
+  digitalWrite(BUZZER_PIN, LOW);
+  pinMode(FENCING_PIN, INPUT_PULLUP); // 防浮空误触【红方同款最优配置】
 
   Serial.begin(115200);
   Serial.println("==================================");
-  Serial.println("=== 重剑计分器（绿方-ESP32C3完整版）初始化 ===");
+  Serial.println("=== 重剑计分器（绿方-ESP32C3 完整版） ===");
   Serial.println("==================================");
 
+  // BLE初始化核心 - 保留红方的修复：必加 INDICATE 双属性 保证Notify稳定
   BLEDevice::init(DEVICE_NAME);
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -71,33 +73,28 @@ void setup() {
                       CHARACTERISTIC_UUID,
                       BLECharacteristic::PROPERTY_READ |
                       BLECharacteristic::PROPERTY_WRITE |
-                      BLECharacteristic::PROPERTY_NOTIFY
+                      BLECharacteristic::PROPERTY_NOTIFY |  // 原始保留
+                      BLECharacteristic::PROPERTY_INDICATE  // ✅ 关键新增 缺一不可
                     );
-  pCharacteristic->addDescriptor(new BLE2902());
-  pCharacteristic->setValue("GREEN:0");
-
-
-
+  
+  pCharacteristic->addDescriptor(&ble2902Desc);
+  pCharacteristic->setValue("GREEN:0"); // ✅ 初始化值改为绿方
   pService->start();
 
-//添加部分看看能不能解决问题
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID); // 广播服务UUID
-  pAdvertising->setScanResponse(true); // 开启扫描响应
-  pAdvertising->setName(DEVICE_NAME); // 这里的名称会作为Short Local Name广播
-/////////////////////
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setName(DEVICE_NAME);
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x12);
+  pAdvertising->start();
 
-  
-
-  pServer->getAdvertising()->start();
-
-  Serial.println("📶【绿方-蓝牙】广播启动成功，设备名：" DEVICE_NAME);
-  Serial.println("📡【绿方-信号】GPIO8重剑采集就绪，等待击中");
-  Serial.println("🔔【绿方-提示】GPIO7蜂鸣器+GPIO6指示灯就绪");
+  Serial.println("📶【绿方-蓝牙】广播启动成功，设备名：epee_green");
+  Serial.println("🟩【绿方-就绪】重剑采集就绪，等待击中信号！");
 }
 
 void loop() {
-  // 重剑信号采集+消抖 不变
+  // 重剑信号采集+消抖逻辑 与红方完全一致 最优20ms消抖 无需修改
   bool currentReading = digitalRead(FENCING_PIN);
   currentReading = !currentReading;
 
@@ -114,7 +111,7 @@ void loop() {
     }
   }
 
-  // 蜂鸣200ms停，灯亮500ms停，最优体验
+  // 击中指示灯+蜂鸣器时序控制 与红方完全一致：蜂鸣200ms 指示灯亮500ms
   if (hitLedIsOn || buzzerIsOn) {
     unsigned long now = millis();
     if (buzzerIsOn && (now - hitLedOnTime) >= 200) {
@@ -130,7 +127,9 @@ void loop() {
   lastHitState = currentReading;
 }
 
-// 击中事件：亮灯+响蜂鸣+计分+蓝牙上报
+/**
+ * @brief 击中事件处理函数 - 保留红方全部精准修复 仅修改绿方标识和上报格式
+ */
 void hitEvent() {
   digitalWrite(LED_HIT, HIGH);
   digitalWrite(BUZZER_PIN, HIGH);
@@ -138,19 +137,21 @@ void hitEvent() {
   hitLedIsOn = true;
   buzzerIsOn = true;
 
-  greenScore++;
+  if(greenScore < 99) greenScore++; // ✅ 绿方得分累加
+  String timeStr = String(millis());  
   Serial.print("🎯【绿方-击中】时间戳：");
-  String time = String(millis());  
-  Serial.print(time);
+  Serial.print(timeStr);
   Serial.print(" | 绿方得分：");
   Serial.println(greenScore);
 
-  if (deviceConnected) {
-    String scoreData = "time:"+ time +"|"+"GREEN:" + String(greenScore);
+  // ✅ 保留红方的核心修复：库原生连接判断，杜绝发空包，适配最新Arduino BLE库
+  BLEServer *pServer = BLEDevice::getServer();
+  if (pServer != NULL && pServer->getConnectedCount() > 0) {
+    String scoreData = "time:" + timeStr + "|GREEN:" + String(greenScore); // ✅ 绿方上报格式
     pCharacteristic->setValue(scoreData.c_str());
     pCharacteristic->notify();
-    Serial.println("📤【绿方-蓝牙】上报得分：" + scoreData);
+    Serial.println("📤【绿方-上报】成功推送数据 → " + scoreData + "\n");
   } else {
-    Serial.println("⚠️【绿方-蓝牙】未连接，得分暂存本地");
+    Serial.println("⚠️【绿方-提示】无BLE主机连接，得分暂存本地\n");
   }
 }
