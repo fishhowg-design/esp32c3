@@ -9,7 +9,7 @@
 
 // ✅【修复】ESP32-C3 专属合法引脚定义 (全部可用，无GPIO20/21/12)
 #define LED_APP_CONN  2   // 小程序连接指示灯
-#define KEY_MAIN      9   // 主按键(1=连红,2=连绿,3=重置)
+#define KEY_MAIN      10   // 主按键(1=连红,2=连绿,3=重置)
 #define KEY_CONFIRM_RED 8 // 红方确认按键
 #define KEY_CONFIRM_GRN 7 // 绿方确认按键
 #define LED_BLUE1     1   // 红方连接指示灯-闪烁/常亮
