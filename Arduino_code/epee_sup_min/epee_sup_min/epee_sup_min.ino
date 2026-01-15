@@ -3,8 +3,9 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
-// --- 新增：物理开关配置 ---
-const int BUTTON_PIN = 7; // 安全引脚：GPIO 7
+// --- 新增：双物理开关配置 ---
+const int BTN_NEXT = 7;   // 下一剑按钮：GPIO 7
+const int BTN_RESET = 6;  // 完全重置按钮：GPIO 6
 
 // --- 配置区 ---
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
@@ -41,7 +42,7 @@ void resetMatch(bool resetTotalScore) {
     firstHitTime = 0;
 }
 
-// --- 核心计分判定 (FIE 规则: 40ms 互中窗口) ---
+// --- 核心计分判定  (FIE 规则: 40ms 互中窗口) ---
 void evaluateHit() {
     Serial.println("[判定] 判定窗口关闭，正在计算...");
     
@@ -58,20 +59,18 @@ void evaluateHit() {
     }
 
     Serial.printf(">>> 当前总比分 | 红色 %d : %d 绿色 |\n", redScore, greenScore);
-    Serial.println("[系统] 锁定中。按按钮或输入 'n' 准备下一剑，输入 'r' 重置。");
+    Serial.println("[提示] 按钮7:下一剑 | 按钮6:总重置");
     isLocked = true; 
 }
 
 // --- 红色设备回调 ---
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     if (isLocked) return; 
-
     unsigned long currentTime = millis();
     if (firstHitTime == 0) {
         firstHitTime = currentTime;
         Serial.println("\n[信号] 红色首击！开启 40ms 窗口...");
     }
-
     if (currentTime - firstHitTime <= 40) {
         if (!redHitReceived) {
             redHitReceived = true;
@@ -83,13 +82,11 @@ static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, si
 // --- 绿色设备回调 ---
 static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     if (isLocked) return;
-
     unsigned long currentTime = millis();
     if (firstHitTime == 0) {
         firstHitTime = currentTime;
         Serial.println("\n[信号] 绿色首击！开启 40ms 窗口...");
     }
-
     if (currentTime - firstHitTime <= 40) {
         if (!greenHitReceived) {
             greenHitReceived = true;
@@ -117,19 +114,13 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 bool connectToDevice(BLEAdvertisedDevice* targetDevice, void (*callback)(BLERemoteCharacteristic*, uint8_t*, size_t, bool)) {
     Serial.print("正在尝试连接: ");
     Serial.println(targetDevice->getName().c_str());
-    
     BLEClient* pClient = BLEDevice::createClient();
     if (!pClient->connect(targetDevice)) return false;
-
     BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr) { pClient->disconnect(); return false; }
-
     BLERemoteCharacteristic* pRemoteChar = pRemoteService->getCharacteristic(charUUID);
     if (pRemoteChar == nullptr) { pClient->disconnect(); return false; }
-
-    if (pRemoteChar->canNotify()) {
-        pRemoteChar->registerForNotify(callback);
-    }
+    if (pRemoteChar->canNotify()) pRemoteChar->registerForNotify(callback);
     return true;
 }
 
@@ -137,8 +128,9 @@ void setup() {
     Serial.begin(115200);
     while (!Serial && millis() < 5000);
     
-    // --- 新增：物理开关初始化 ---
-    pinMode(BUTTON_PIN, INPUT_PULLUP); // 使用内部上拉电阻
+    // --- 初始化两个物理开关 ---
+    pinMode(BTN_NEXT, INPUT_PULLUP); 
+    pinMode(BTN_RESET, INPUT_PULLUP);
 
     Serial.println("========================================");
     Serial.println("   ESP32-C3 国际重剑计分裁判系统启动   ");
@@ -169,30 +161,40 @@ void loop() {
     }
 
     // 2. 计分窗口判定
-    // 一旦有人击中，等待 45ms (略大于40ms确保数据收全) 后进行最终判定
     if (firstHitTime > 0 && !isLocked) {
         if (millis() - firstHitTime > 45) {
             evaluateHit();
         }
     }
 
-    // 3. 串口交互
+    // 3. 串口交互 (保留原有功能)
     if (Serial.available()) {
         char cmd = Serial.read();
         if (cmd == 'r') resetMatch(true);
         if (cmd == 'n') resetMatch(false);
     }
 
-    // --- 新增：物理开关检测逻辑 ---
-    static bool lastState = HIGH;
-    bool currentState = digitalRead(BUTTON_PIN);
-    if (lastState == HIGH && currentState == LOW) { // 检测到按键按下（下降沿）
-        delay(50); // 简单消抖
-        if (digitalRead(BUTTON_PIN) == LOW) {
-            resetMatch(false); // 下一剑
-        }
+    // --- 4. 物理按键检测逻辑 ---
+    static bool lastNextState = HIGH;
+    static bool lastResetState = HIGH;
+    
+    bool currNext = digitalRead(BTN_NEXT);
+    bool currReset = digitalRead(BTN_RESET);
+
+    // 检测“下一剑”按钮 (GPIO 7)
+    if (lastNextState == HIGH && currNext == LOW) {
+        delay(50); // 消抖
+        if (digitalRead(BTN_NEXT) == LOW) resetMatch(false);
     }
-    lastState = currentState;
+
+    // 检测“总重置”按钮 (GPIO 6)
+    if (lastResetState == HIGH && currReset == LOW) {
+        delay(50); // 消抖
+        if (digitalRead(BTN_RESET) == LOW) resetMatch(true);
+    }
+
+    lastNextState = currNext;
+    lastResetState = currReset;
 
     delay(1); 
 }
