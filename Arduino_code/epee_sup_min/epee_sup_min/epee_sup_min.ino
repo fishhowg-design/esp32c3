@@ -3,9 +3,10 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
-// --- 新增：双物理开关配置 ---
+// --- 引脚配置 ---
 const int BTN_NEXT = 7;   // 下一剑按钮：GPIO 7
 const int BTN_RESET = 6;  // 完全重置按钮：GPIO 6
+const int LED_BOARD = 8;  // 板载蓝色LED：GPIO 8
 
 // --- 配置区 ---
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
@@ -27,7 +28,39 @@ static BLEAdvertisedDevice* greenDevice;
 static boolean redConnected = false;
 static boolean greenConnected = false;
 
-// --- 重置比赛逻辑 ---
+// --- [核心逻辑] 仅通过灯光频率区分红绿在线状态 ---
+void updateStatusLed() {
+    unsigned long now = millis();
+    
+    // 1. 双方都上线：常亮 (最高优先级)
+    if (redConnected && greenConnected) {
+        digitalWrite(LED_BOARD, LOW); // 低电平点亮
+        return;
+    }
+
+    // 2. 只有红方在线：每2秒闪烁 1 下
+    if (redConnected && !greenConnected) {
+        int cycle = now % 2000;
+        if (cycle < 200) digitalWrite(LED_BOARD, LOW); 
+        else digitalWrite(LED_BOARD, HIGH);           
+        return;
+    }
+
+    // 3. 只有绿方在线：每2秒闪烁 2 下
+    if (!redConnected && greenConnected) {
+        int cycle = now % 2000;
+        if (cycle < 200) digitalWrite(LED_BOARD, LOW);           // 第一闪
+        else if (cycle < 400) digitalWrite(LED_BOARD, HIGH);     // 间隔
+        else if (cycle < 600) digitalWrite(LED_BOARD, LOW);      // 第二闪
+        else digitalWrite(LED_BOARD, HIGH);                      // 停顿
+        return;
+    }
+
+    // 4. 其他状态（连接中、无人在线）：保持灯灭，避免干扰
+    digitalWrite(LED_BOARD, HIGH);
+}
+
+// --- 重置比赛逻辑 (保持不变) ---
 void resetMatch(bool resetTotalScore) {
     if (resetTotalScore) {
         redScore = 0;
@@ -45,11 +78,9 @@ void resetMatch(bool resetTotalScore) {
 // --- 核心计分判定  (FIE 规则: 40ms 互中窗口) ---
 void evaluateHit() {
     Serial.println("[判定] 判定窗口关闭，正在计算...");
-    
     if (redHitReceived && greenHitReceived) {
-        redScore++;
-        greenScore++;
-        Serial.println(">>> 结果: 【互中】 (Double Hit)！双方各加 1 分");
+        redScore++; greenScore++;
+        Serial.println(">>> 结果: 【互中】！双方各加 1 分");
     } else if (redHitReceived) {
         redScore++;
         Serial.println(">>> 结果: 【红方单中】！红色加 1 分");
@@ -57,7 +88,6 @@ void evaluateHit() {
         greenScore++;
         Serial.println(">>> 结果: 【绿方单中】！绿色加 1 分");
     }
-
     Serial.printf(">>> 当前总比分 | 红色 %d : %d 绿色 |\n", redScore, greenScore);
     Serial.println("[提示] 按钮7:下一剑 | 按钮6:总重置");
     isLocked = true; 
@@ -126,11 +156,10 @@ bool connectToDevice(BLEAdvertisedDevice* targetDevice, void (*callback)(BLERemo
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial && millis() < 5000);
-    
-    // --- 初始化两个物理开关 ---
     pinMode(BTN_NEXT, INPUT_PULLUP); 
     pinMode(BTN_RESET, INPUT_PULLUP);
+    pinMode(LED_BOARD, OUTPUT);
+    digitalWrite(LED_BOARD, HIGH); // 初始灭灯
 
     Serial.println("========================================");
     Serial.println("   ESP32-C3 国际重剑计分裁判系统启动   ");
@@ -144,7 +173,8 @@ void setup() {
 }
 
 void loop() {
-    // 1. 处理连接请求
+    updateStatusLed();
+
     if (doConnectRed) {
         if (connectToDevice(redDevice, redNotifyCallback)) {
             Serial.println("[状态] epee_red 已上线");
@@ -160,39 +190,29 @@ void loop() {
         doConnectGreen = false;
     }
 
-    // 2. 计分窗口判定
     if (firstHitTime > 0 && !isLocked) {
-        if (millis() - firstHitTime > 45) {
-            evaluateHit();
-        }
+        if (millis() - firstHitTime > 45) evaluateHit();
     }
 
-    // 3. 串口交互 (保留原有功能)
     if (Serial.available()) {
         char cmd = Serial.read();
         if (cmd == 'r') resetMatch(true);
         if (cmd == 'n') resetMatch(false);
     }
 
-    // --- 4. 物理按键检测逻辑 ---
     static bool lastNextState = HIGH;
     static bool lastResetState = HIGH;
-    
     bool currNext = digitalRead(BTN_NEXT);
     bool currReset = digitalRead(BTN_RESET);
 
-    // 检测“下一剑”按钮 (GPIO 7)
     if (lastNextState == HIGH && currNext == LOW) {
-        delay(50); // 消抖
+        delay(50);
         if (digitalRead(BTN_NEXT) == LOW) resetMatch(false);
     }
-
-    // 检测“总重置”按钮 (GPIO 6)
     if (lastResetState == HIGH && currReset == LOW) {
-        delay(50); // 消抖
+        delay(50);
         if (digitalRead(BTN_RESET) == LOW) resetMatch(true);
     }
-
     lastNextState = currNext;
     lastResetState = currReset;
 
