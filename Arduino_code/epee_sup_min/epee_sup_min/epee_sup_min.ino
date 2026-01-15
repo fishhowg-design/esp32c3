@@ -3,6 +3,9 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
+// --- 新增：物理开关配置 ---
+const int BUTTON_PIN = 7; // 安全引脚：GPIO 7
+
 // --- 配置区 ---
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
 static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
@@ -55,7 +58,7 @@ void evaluateHit() {
     }
 
     Serial.printf(">>> 当前总比分 | 红色 %d : %d 绿色 |\n", redScore, greenScore);
-    Serial.println("[系统] 锁定中。输入 'n' 准备下一剑，输入 'r' 完全重置比分。");
+    Serial.println("[系统] 锁定中。按按钮或输入 'n' 准备下一剑，输入 'r' 重置。");
     isLocked = true; 
 }
 
@@ -69,7 +72,6 @@ static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, si
         Serial.println("\n[信号] 红色首击！开启 40ms 窗口...");
     }
 
-    // 检查是否在 40ms 互中有效期内
     if (currentTime - firstHitTime <= 40) {
         if (!redHitReceived) {
             redHitReceived = true;
@@ -135,6 +137,9 @@ void setup() {
     Serial.begin(115200);
     while (!Serial && millis() < 5000);
     
+    // --- 新增：物理开关初始化 ---
+    pinMode(BUTTON_PIN, INPUT_PULLUP); // 使用内部上拉电阻
+
     Serial.println("========================================");
     Serial.println("   ESP32-C3 国际重剑计分裁判系统启动   ");
     Serial.println("========================================");
@@ -174,9 +179,20 @@ void loop() {
     // 3. 串口交互
     if (Serial.available()) {
         char cmd = Serial.read();
-        if (cmd == 'r') resetMatch(true);  // 完全重置
-        if (cmd == 'n') resetMatch(false); // 准备下一剑
+        if (cmd == 'r') resetMatch(true);
+        if (cmd == 'n') resetMatch(false);
     }
 
-    delay(1); // 保持高性能循环
+    // --- 新增：物理开关检测逻辑 ---
+    static bool lastState = HIGH;
+    bool currentState = digitalRead(BUTTON_PIN);
+    if (lastState == HIGH && currentState == LOW) { // 检测到按键按下（下降沿）
+        delay(50); // 简单消抖
+        if (digitalRead(BUTTON_PIN) == LOW) {
+            resetMatch(false); // 下一剑
+        }
+    }
+    lastState = currentState;
+
+    delay(1); 
 }
