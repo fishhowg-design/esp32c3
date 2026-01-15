@@ -1,0 +1,5 @@
+#define FENCING_PIN     8    // 重剑信号采集GPIO
+#define DEBOUNCE_DELAY  20    // 重剑专用消抖时间 最优值 无需修改
+#define LED_HIT         6    // 击中提示灯 GPIO6
+#define LED_BLUETOOTH   10    // 蓝牙连接状态灯 GPIO10
+#define BUZZER_PIN      7     // 蜂鸣器控制引脚 GPIO7

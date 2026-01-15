@@ -3,6 +3,19 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
+// --- 新增引脚配置 ---
+const int PIN_RED_LED = 4;   // 红方击中灯
+const int PIN_GRN_LED = 5;   // 绿方击中灯
+const int PIN_BUZZER  = 3;   // 蜂鸣器
+
+// --- 时间参数 (FIE 标准) ---
+const unsigned long LIGHT_DURATION = 3000; // 亮灯 3 秒
+const unsigned long BEEP_DURATION  = 800;  // 鸣叫 0.8 秒
+
+// --- 状态变量 ---
+unsigned long hitEffectStartTime = 0; // 效果开始时间
+bool effectActive = false;           // 效果是否正在运行
+
 // --- 引脚配置 ---
 const int BTN_NEXT = 7;   // 下一剑按钮：GPIO 7
 const int BTN_RESET = 6;  // 完全重置按钮：GPIO 6
@@ -73,25 +86,62 @@ void resetMatch(bool resetTotalScore) {
     redHitReceived = false;
     greenHitReceived = false;
     firstHitTime = 0;
+
+    effectActive = false;
+    digitalWrite(PIN_RED_LED, LOW);
+    digitalWrite(PIN_GRN_LED, LOW);
+    digitalWrite(PIN_BUZZER, LOW);
 }
 
-// --- 核心计分判定  (FIE 规则: 40ms 互中窗口) ---
+// --- 修改后的核心判定函数 ---
 void evaluateHit() {
-    Serial.println("[判定] 判定窗口关闭，正在计算...");
+    Serial.println("[判定] 判定窗口关闭，正在触发效果...");
+    isLocked = true; 
+    hitEffectStartTime = millis();
+    effectActive = true;
+
     if (redHitReceived && greenHitReceived) {
         redScore++; greenScore++;
-        Serial.println(">>> 结果: 【互中】！双方各加 1 分");
+        digitalWrite(PIN_RED_LED, HIGH);
+        digitalWrite(PIN_GRN_LED, HIGH);
+        Serial.println(">>> 【互中】！");
     } else if (redHitReceived) {
         redScore++;
-        Serial.println(">>> 结果: 【红方单中】！红色加 1 分");
+        digitalWrite(PIN_RED_LED, HIGH);
+        Serial.println(">>> 【红方单中】！");
     } else if (greenHitReceived) {
         greenScore++;
-        Serial.println(">>> 结果: 【绿方单中】！绿色加 1 分");
+        digitalWrite(PIN_GRN_LED, HIGH);
+        Serial.println(">>> 【绿方单中】！");
     }
+
+    // 触发蜂鸣器
+    digitalWrite(PIN_BUZZER, HIGH);
+    
     Serial.printf(">>> 当前总比分 | 红色 %d : %d 绿色 |\n", redScore, greenScore);
-    Serial.println("[提示] 按钮7:下一剑 | 按钮6:总重置");
-    isLocked = true; 
 }
+
+// --- 处理灯光和声音自动关闭的任务 ---
+void handleHitEffects() {
+    if (!effectActive) return;
+
+    unsigned long elapsed = millis() - hitEffectStartTime;
+
+    // 1. 处理蜂鸣器：0.8秒后关闭
+    if (elapsed > BEEP_DURATION) {
+        digitalWrite(PIN_BUZZER, LOW);
+    }
+
+    // 2. 处理灯光：3秒后关闭
+    if (elapsed > LIGHT_DURATION) {
+        digitalWrite(PIN_RED_LED, LOW);
+        digitalWrite(PIN_GRN_LED, LOW);
+        effectActive = false; 
+        Serial.println("[系统] 效果显示结束，等待下一剑复位...");
+    }
+}
+
+
 
 // --- 红色设备回调 ---
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
@@ -183,6 +233,12 @@ void setup() {
     pinMode(LED_BOARD, OUTPUT);
     digitalWrite(LED_BOARD, HIGH); // 初始灭灯
 
+//击中的灯
+    pinMode(PIN_RED_LED, OUTPUT);
+    pinMode(PIN_GRN_LED, OUTPUT);
+    pinMode(PIN_BUZZER, OUTPUT);
+
+
     Serial.println("========================================");
     Serial.println("   ESP32-C3 国际重剑计分裁判系统启动   ");
     Serial.println("========================================");
@@ -201,8 +257,8 @@ void setup() {
 }
 
 void loop() {
-    updateStatusLed();
-
+    updateStatusLed();   // 维护连接状态灯
+    handleHitEffects();  // 维护击中后的声光效果
    // --- 优化后的红方连接处理 ---
     if (doConnectRed && !redConnected) {
         Serial.println(">>> 准备连接红方，先清理扫描...");

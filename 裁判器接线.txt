@@ -1,0 +1,17 @@
+// --- 新增引脚配置 ---
+const int PIN_RED_LED = 4;   // 红方击中灯
+const int PIN_GRN_LED = 5;   // 绿方击中灯
+const int PIN_BUZZER  = 3;   // 蜂鸣器
+
+// --- 时间参数 (FIE 标准) ---
+const unsigned long LIGHT_DURATION = 3000; // 亮灯 3 秒
+const unsigned long BEEP_DURATION  = 800;  // 鸣叫 0.8 秒
+
+// --- 状态变量 ---
+unsigned long hitEffectStartTime = 0; // 效果开始时间
+bool effectActive = false;           // 效果是否正在运行
+
+// --- 引脚配置 ---
+const int BTN_NEXT = 7;   // 下一剑按钮：GPIO 7
+const int BTN_RESET = 6;  // 完全重置按钮：GPIO 6
+const int LED_BOARD = 8;  // 板载蓝色LED：GPIO 8
