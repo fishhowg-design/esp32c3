@@ -41,6 +41,14 @@ static BLEAdvertisedDevice* greenDevice;
 static boolean redConnected = false;
 static boolean greenConnected = false;
 
+// ===================== 新增：连接重试次数限制核心配置 =====================
+const int MAX_CONNECT_RETRY = 5;  // 单个设备最大重试连接次数
+const int MAX_SCAN_RETRY = 5;  // 最大扫描次数
+int redRetryCount = 0;             // 红方连接失败重试计数
+int greenRetryCount = 0;           // 绿方连接失败重试计数
+int scan_count = MAX_SCAN_RETRY;  //扫描计数 
+// =========================================================================
+
 // --- [核心逻辑] 仅通过灯光频率区分红绿在线状态 ---
 void updateStatusLed() {
     unsigned long now = millis();
@@ -141,8 +149,6 @@ void handleHitEffects() {
     }
 }
 
-
-
 // --- 红色设备回调 ---
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     if (isLocked) return; 
@@ -178,14 +184,13 @@ static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, 
 // --- 扫描与连接逻辑 ---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-   String name = advertisedDevice.getName().c_str();
-        if (name == "epee_red" && !redConnected && !doConnectRed) {
+        String name = advertisedDevice.getName().c_str();
+        if (name == "epee_red" && !redConnected && !doConnectRed && redRetryCount < MAX_CONNECT_RETRY) {
             Serial.println(">>> 锁定 epee_red");
-            // 务必使用拷贝构造函数
             redDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnectRed = true;
         } 
-        else if (name == "epee_green" && !greenConnected && !doConnectGreen) {
+        else if (name == "epee_green" && !greenConnected && !doConnectGreen && greenRetryCount < MAX_CONNECT_RETRY) {
             Serial.println(">>> 锁定 epee_green");
             greenDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnectGreen = true;
@@ -194,7 +199,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 };
 
 bool connectToDevice(BLEAdvertisedDevice* targetDevice, void (*callback)(BLERemoteCharacteristic*, uint8_t*, size_t, bool)) {
-Serial.print("正在连接: ");
+    Serial.print("正在连接: ");
     Serial.println(targetDevice->getName().c_str());
     
     BLEClient* pClient = BLEDevice::createClient();
@@ -204,46 +209,50 @@ Serial.print("正在连接: ");
 
     if (!pClient->connect(targetDevice)) {
         Serial.println("连接失败，等待下次扫描");
+        pClient->disconnect();  // 新增：释放客户端，防止内存泄漏
+        delete pClient;         // 新增：销毁对象，优化内存
         return false;
     }
     
     BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr) {
+        Serial.println("未找到目标服务UUID");
         pClient->disconnect();
+        delete pClient;
         return false;
     }
     
     BLERemoteCharacteristic* pRemoteChar = pRemoteService->getCharacteristic(charUUID);
     if (pRemoteChar == nullptr) {
+        Serial.println("未找到目标特征值UUID");
         pClient->disconnect();
+        delete pClient;
         return false;
     }
     
     if (pRemoteChar->canNotify()) {
         pRemoteChar->registerForNotify(callback);
     }
-    
+    Serial.println("✅ 特征值订阅成功");
     return true;
 }
 
 void setup() {
     Serial.begin(115200);
+    scan_count = 0;
     pinMode(BTN_NEXT, INPUT_PULLUP); 
     pinMode(BTN_RESET, INPUT_PULLUP);
     pinMode(LED_BOARD, OUTPUT);
     digitalWrite(LED_BOARD, HIGH); // 初始灭灯
 
-//击中的灯
+    //击中的灯
     pinMode(PIN_RED_LED, OUTPUT);
     pinMode(PIN_GRN_LED, OUTPUT);
     pinMode(PIN_BUZZER, OUTPUT);
 
-
     Serial.println("========================================");
-    Serial.println("   ESP32-C3 国际重剑计分裁判系统启动   ");
+    Serial.println("   ESP32-S3 国际重剑计分裁判系统启动   ");
     Serial.println("========================================");
-
-    // ... 前面的引脚初始化保持不变 ...
 
     BLEDevice::init("epee_supmin");
     BLEScan* pBLEScan = BLEDevice::getScan();
@@ -259,48 +268,70 @@ void setup() {
 void loop() {
     updateStatusLed();   // 维护连接状态灯
     handleHitEffects();  // 维护击中后的声光效果
-   // --- 优化后的红方连接处理 ---
-    if (doConnectRed && !redConnected) {
-        Serial.println(">>> 准备连接红方，先清理扫描...");
+
+    // --- 优化后的红方连接处理 + 重试计数+超次数提示 ---
+    if (doConnectRed && !redConnected && redRetryCount < MAX_CONNECT_RETRY) {
+        Serial.printf(">>> 准备连接红方 [当前重试次数: %d/%d] \n", redRetryCount+1, MAX_CONNECT_RETRY);
         BLEDevice::getScan()->stop(); 
         delay(500); // 关键：给底层协议栈 500ms 彻底退出的时间
 
         if (connectToDevice(redDevice, redNotifyCallback)) {
-            Serial.println("[状态] epee_red 已上线");
+            Serial.println("[状态] ✅ epee_red 已上线");
             redConnected = true;
+            redRetryCount = 0; // 连接成功，重置重试计数
         } else {
-            Serial.println("[错误] 红方连接失败，准备重试...");
+            redRetryCount++;   // 连接失败，重试计数+1
+            Serial.printf("[错误] ❌ 红方连接失败，剩余重试次数: %d\n", MAX_CONNECT_RETRY - redRetryCount);
+            
+            // 新增：红方超过10次连接失败
+            if(redRetryCount >= MAX_CONNECT_RETRY){
+                Serial.println("==================================================");
+                Serial.println("⚠️ [严重错误] epee_red 连接重试超过10次！建议重启设备恢复！");
+                Serial.println("==================================================");
+                doConnectRed = false;
+            }
         }
         doConnectRed = false; 
     }
 
-    // --- 优化后的绿方连接处理 ---
-    if (doConnectGreen && !greenConnected) {
-        Serial.println(">>> 准备连接绿方，先清理扫描...");
+    // --- 优化后的绿方连接处理 + 重试计数+超次数提示 ---
+    if (doConnectGreen && !greenConnected && greenRetryCount < MAX_CONNECT_RETRY) {
+        Serial.printf(">>> 准备连接绿方 [当前重试次数: %d/%d] \n", greenRetryCount+1, MAX_CONNECT_RETRY);
         BLEDevice::getScan()->stop();
         delay(500); // 关键：冷静期
 
         if (connectToDevice(greenDevice, greenNotifyCallback)) {
-            Serial.println("[状态] epee_green 已上线");
+            Serial.println("[状态] ✅ epee_green 已上线");
             greenConnected = true;
+            greenRetryCount = 0; // 连接成功，重置重试计数
         } else {
-            Serial.println("[错误] 绿方连接失败，准备重试...");
+            greenRetryCount++;   // 连接失败，重试计数+1
+            Serial.printf("[错误] ❌ 绿方连接失败，剩余重试次数: %d\n", MAX_CONNECT_RETRY - greenRetryCount);
+            
+            // 新增：绿方超过10次连接失败
+            if(greenRetryCount >= MAX_CONNECT_RETRY){
+                Serial.println("==================================================");
+                Serial.println("⚠️ [严重错误] epee_green 连接重试超过10次！建议重启设备恢复！");
+                Serial.println("==================================================");
+                doConnectGreen = false;
+            }
         }
         doConnectGreen = false;
     }
 
-    // --- 核心逻辑：如果有人没连上，且当前没在处理连接，就开启扫描 ---
+    // --- 核心逻辑：如果有人没连上+重试次数没超，就开启扫描 ---
     static unsigned long scanTimer = 0;
-    if (!redConnected || !greenConnected) {
+    if ((( !redConnected && redRetryCount < MAX_CONNECT_RETRY ) || ( !greenConnected && greenRetryCount < MAX_CONNECT_RETRY ) ) 
+    && scan_count <= MAX_SCAN_RETRY) {
         if (!doConnectRed && !doConnectGreen) {
             if (millis() - scanTimer > 2000) { // 每2秒检查一次是否需要重启扫描
-                Serial.println("[系统] 启动一轮新扫描...");
+                Serial.printf("[系统] 启动一轮新扫描,扫描次数%d \n", scan_count);
+                scan_count ++;
                 BLEDevice::getScan()->start(5, false); // 扫5秒
                 scanTimer = millis();
             }
         }
     }
-
 
     if (firstHitTime > 0 && !isLocked) {
         if (millis() - firstHitTime > 45) evaluateHit();
@@ -327,7 +358,6 @@ void loop() {
     }
     lastNextState = currNext;
     lastResetState = currReset;
-
 
     delay(1); 
 }
