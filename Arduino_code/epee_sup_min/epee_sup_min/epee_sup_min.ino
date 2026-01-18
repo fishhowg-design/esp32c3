@@ -151,6 +151,7 @@ void handleHitEffects() {
 
 // --- 红色设备回调 ---
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+    Serial.println("[日志] epee_red 回调！");
     if (isLocked) return; 
     unsigned long currentTime = millis();
     if (firstHitTime == 0) {
@@ -167,6 +168,7 @@ static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, si
 
 // --- 绿色设备回调 ---
 static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+    Serial.println("[日志] epee_green 回调");
     if (isLocked) return;
     unsigned long currentTime = millis();
     if (firstHitTime == 0) {

@@ -110,7 +110,7 @@ void loop() {
       }
     }
   }
-
+/*
   // 击中指示灯+蜂鸣器时序控制
   if (hitLedIsOn || buzzerIsOn) {
     unsigned long now = millis();
@@ -123,7 +123,7 @@ void loop() {
       hitLedIsOn = false;
     }
   }
-
+*/
   lastHitState = currentReading;
 }
 
