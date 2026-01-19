@@ -197,9 +197,8 @@ bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteri
 }
 
 // =====================【任务回调与类】=====================
-
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-       lockedPrintln("[SIGNAL] RED RAW HIT!");
+    lockedPrintln("[SIGNAL] RED RAW HIT!");
     if (!isLocked) {
         redHitRaw = true;
         redHitTimestamp = millis();

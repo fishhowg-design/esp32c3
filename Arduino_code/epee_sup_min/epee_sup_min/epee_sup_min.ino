@@ -1,61 +1,119 @@
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
+#include <Arduino.h>
+// 显式引用所有相关头文件，确保类定义可见
+#include <NimBLEDevice.h>
+#include <NimBLEAdvertisedDevice.h>
+#include <NimBLEScan.h>
+#include <NimBLEClient.h>
+#include <NimBLEUtils.h>
 
-// --- 新增引脚配置 ---
+// --- 引脚配置 ---
 const int PIN_RED_LED = 4;   // 红方击中灯
 const int PIN_GRN_LED = 5;   // 绿方击中灯
 const int PIN_BUZZER  = 3;   // 蜂鸣器
 
+const int BTN_NEXT = 7;      // 下一剑按钮
+const int BTN_RESET = 6;     // 完全重置按钮
+const int LED_BOARD = 8;     // 板载蓝色LED
+
 // --- 时间参数 (FIE 标准) ---
-const unsigned long LIGHT_DURATION = 3000; // 亮灯 3 秒
-const unsigned long BEEP_DURATION  = 800;  // 鸣叫 0.8 秒
+const unsigned long LIGHT_DURATION = 3000;
+const unsigned long BEEP_DURATION  = 800;
 
 // --- 状态变量 ---
-unsigned long hitEffectStartTime = 0; // 效果开始时间
-bool effectActive = false;           // 效果是否正在运行
-
-// --- 引脚配置 ---
-const int BTN_NEXT = 7;   // 下一剑按钮：GPIO 7
-const int BTN_RESET = 6;  // 完全重置按钮：GPIO 6
-const int LED_BOARD = 8;  // 板载蓝色LED：GPIO 8
+unsigned long hitEffectStartTime = 0;
+bool effectActive = false;
 
 // --- 配置区 ---
-static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
-static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
+static NimBLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
+static NimBLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 
 // --- 计分变量 ---
 int redScore = 0;
 int greenScore = 0;
-unsigned long firstHitTime = 0; // 记录回合第一次击中的时间
-bool isLocked = false;          // 回合锁定状态
-bool redHitReceived = false;    // 本回合红色是否有效击中
-bool greenHitReceived = false;  // 本回合绿色是否有效击中
+unsigned long firstHitTime = 0;
+bool isLocked = false;
+bool redHitReceived = false;
+bool greenHitReceived = false;
 
 // --- BLE 状态变量 ---
-static boolean doConnectRed = false;
-static boolean doConnectGreen = false;
-static BLEAdvertisedDevice* redDevice;
-static BLEAdvertisedDevice* greenDevice;
-static boolean redConnected = false;
-static boolean greenConnected = false;
+NimBLEAddress* targetRedAddress = nullptr;
+NimBLEAddress* targetGreenAddress = nullptr;
 
-// ===================== 新增：连接重试次数限制核心配置 =====================
-const int MAX_CONNECT_RETRY = 5;  // 单个设备最大重试连接次数
-const int MAX_SCAN_RETRY = 5;  // 最大扫描次数
-int redRetryCount = 0;             // 红方连接失败重试计数
-int greenRetryCount = 0;           // 绿方连接失败重试计数
-int scan_count = MAX_SCAN_RETRY;  //扫描计数 
-// =========================================================================
+bool redConnected = false;
+bool greenConnected = false;
+bool shouldConnectRed = false;   
+bool shouldConnectGreen = false; 
 
-// --- [核心逻辑] 仅通过灯光频率区分红绿在线状态 ---
+NimBLEClient* pRedClient = nullptr;
+NimBLEClient* pGreenClient = nullptr;
+
+// ===================== 连接重试次数限制配置 =====================
+const int MAX_CONNECT_RETRY = 5;  
+const int MAX_SCAN_RETRY = 5;
+int redRetryCount = 0;
+int greenRetryCount = 0;
+int scan_count = 0; 
+// =============================================================
+
+// =============================================================
+//  重点修复：将类定义移到最上方，防止编译器找不到基类
+// =============================================================
+
+// --- 扫描回调类定义 ---
+// 修正后的回调类
+class MyScanCallbacks : public NimBLEScanCallbacks {
+    // 注意：参数必须加 const，且类名已变
+    void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
+        // 使用 -> 访问，因为现在是 const 指针
+        String name = advertisedDevice->getName();
+        Serial.printf("name is %s.",name);
+        Serial.println("");
+        if (name == "epee_red" && !redConnected && redRetryCount < MAX_CONNECT_RETRY) {
+            Serial.println(">>> 发现 epee_red");
+            NimBLEDevice::getScan()->stop();
+            if(targetRedAddress) delete targetRedAddress;
+            targetRedAddress = new NimBLEAddress(advertisedDevice->getAddress());
+            shouldConnectRed = true;
+        } 
+        else if (name == "epee_green" && !greenConnected && greenRetryCount < MAX_CONNECT_RETRY) {
+            Serial.println(">>> 发现 epee_green");
+            NimBLEDevice::getScan()->stop();
+            if(targetGreenAddress) delete targetGreenAddress;
+            targetGreenAddress = new NimBLEAddress(advertisedDevice->getAddress());
+            shouldConnectGreen = true;
+        }
+    }
+};
+
+// --- 连接断开回调类定义 ---
+class ClientCallbacks : public NimBLEClientCallbacks {
+    void onConnect(NimBLEClient* pClient) {
+        Serial.println("[BLE] 已连接");
+    }
+
+    void onDisconnect(NimBLEClient* pClient) {
+        if (targetRedAddress && pClient->getPeerAddress().equals(*targetRedAddress)) {
+            Serial.println("[BLE] ⚠️ 红方意外断开连接");
+            redConnected = false;
+        } 
+        else if (targetGreenAddress && pClient->getPeerAddress().equals(*targetGreenAddress)) {
+            Serial.println("[BLE] ⚠️ 绿方意外断开连接");
+            greenConnected = false;
+        }
+    }
+};
+
+// =============================================================
+//  功能函数区
+// =============================================================
+
+// --- [核心逻辑] 灯光状态 ---
 void updateStatusLed() {
     unsigned long now = millis();
     
-    // 1. 双方都上线：常亮 (最高优先级)
+    // 1. 双方都上线：常亮 (低电平亮)
     if (redConnected && greenConnected) {
-        digitalWrite(LED_BOARD, LOW); // 低电平点亮
+        digitalWrite(LED_BOARD, LOW); 
         return;
     }
 
@@ -70,23 +128,26 @@ void updateStatusLed() {
     // 3. 只有绿方在线：每2秒闪烁 2 下
     if (!redConnected && greenConnected) {
         int cycle = now % 2000;
-        if (cycle < 200) digitalWrite(LED_BOARD, LOW);           // 第一闪
-        else if (cycle < 400) digitalWrite(LED_BOARD, HIGH);     // 间隔
-        else if (cycle < 600) digitalWrite(LED_BOARD, LOW);      // 第二闪
-        else digitalWrite(LED_BOARD, HIGH);                      // 停顿
+        if (cycle < 200) digitalWrite(LED_BOARD, LOW);           
+        else if (cycle < 400) digitalWrite(LED_BOARD, HIGH);     
+        else if (cycle < 600) digitalWrite(LED_BOARD, LOW);      
+        else digitalWrite(LED_BOARD, HIGH);                      
         return;
     }
 
-    // 4. 其他状态（连接中、无人在线）：保持灯灭，避免干扰
+    // 4. 无人在线：保持灭灯
     digitalWrite(LED_BOARD, HIGH);
 }
 
-// --- 重置比赛逻辑 (保持不变) ---
+// --- 重置比赛逻辑 ---
 void resetMatch(bool resetTotalScore) {
     if (resetTotalScore) {
         redScore = 0;
         greenScore = 0;
         Serial.println("\n[系统] >>> 比赛完全重置！比分归零 0:0 <<<");
+        redRetryCount = 0;
+        greenRetryCount = 0;
+        scan_count = 0; 
     } else {
         Serial.println("\n[系统] >>> 回合就绪，准备下一剑 <<<");
     }
@@ -101,7 +162,7 @@ void resetMatch(bool resetTotalScore) {
     digitalWrite(PIN_BUZZER, LOW);
 }
 
-// --- 修改后的核心判定函数 ---
+// --- 判定函数 ---
 void evaluateHit() {
     Serial.println("[判定] 判定窗口关闭，正在触发效果...");
     isLocked = true; 
@@ -123,24 +184,17 @@ void evaluateHit() {
         Serial.println(">>> 【绿方单中】！");
     }
 
-    // 触发蜂鸣器
     digitalWrite(PIN_BUZZER, HIGH);
-    
     Serial.printf(">>> 当前总比分 | 红色 %d : %d 绿色 |\n", redScore, greenScore);
 }
 
-// --- 处理灯光和声音自动关闭的任务 ---
+// --- 处理自动关闭的任务 ---
 void handleHitEffects() {
     if (!effectActive) return;
-
     unsigned long elapsed = millis() - hitEffectStartTime;
 
-    // 1. 处理蜂鸣器：0.8秒后关闭
-    if (elapsed > BEEP_DURATION) {
-        digitalWrite(PIN_BUZZER, LOW);
-    }
+    if (elapsed > BEEP_DURATION) digitalWrite(PIN_BUZZER, LOW);
 
-    // 2. 处理灯光：3秒后关闭
     if (elapsed > LIGHT_DURATION) {
         digitalWrite(PIN_RED_LED, LOW);
         digitalWrite(PIN_GRN_LED, LOW);
@@ -150,10 +204,10 @@ void handleHitEffects() {
 }
 
 // --- 红色设备回调 ---
-static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-    Serial.println("[日志] epee_red 回调！");
+void redNotifyCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     if (isLocked) return; 
     unsigned long currentTime = millis();
+    
     if (firstHitTime == 0) {
         firstHitTime = currentTime;
         Serial.println("\n[信号] 红色首击！开启 40ms 窗口...");
@@ -167,10 +221,10 @@ static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, si
 }
 
 // --- 绿色设备回调 ---
-static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-    Serial.println("[日志] epee_green 回调");
+void greenNotifyCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     if (isLocked) return;
     unsigned long currentTime = millis();
+
     if (firstHitTime == 0) {
         firstHitTime = currentTime;
         Serial.println("\n[信号] 绿色首击！开启 40ms 窗口...");
@@ -183,61 +237,74 @@ static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, 
     }
 }
 
-// --- 扫描与连接逻辑 ---
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-        String name = advertisedDevice.getName().c_str();
-        if (name == "epee_red" && !redConnected && !doConnectRed && redRetryCount < MAX_CONNECT_RETRY) {
-            Serial.println(">>> 锁定 epee_red");
-            redDevice = new BLEAdvertisedDevice(advertisedDevice);
-            doConnectRed = true;
-        } 
-        else if (name == "epee_green" && !greenConnected && !doConnectGreen && greenRetryCount < MAX_CONNECT_RETRY) {
-            Serial.println(">>> 锁定 epee_green");
-            greenDevice = new BLEAdvertisedDevice(advertisedDevice);
-            doConnectGreen = true;
+// --- 连接函数 ---
+bool connectToServer(NimBLEAddress* pAddress, bool isRed) {
+    Serial.printf("正在连接 %s 方: %s ...\n", isRed ? "红" : "绿", pAddress->toString().c_str());
+
+    NimBLEClient* pClient = nullptr;
+
+    if (NimBLEDevice::getCreatedClientCount()) {
+        pClient = NimBLEDevice::getClientByPeerAddress(*pAddress);
+        if (pClient) {
+            if (!pClient->connect(*pAddress, false)) {
+                Serial.println("重连失败");
+                return false;
+            }
+        } else {
+            pClient = NimBLEDevice::createClient();
+        }
+    } else {
+        pClient = NimBLEDevice::createClient();
+    }
+    
+    if(!pClient) {
+        Serial.println("无法创建客户端");
+        return false;
+    }
+
+    pClient->setClientCallbacks(new ClientCallbacks(), false);
+
+    pClient->setConnectionParams(12, 12, 0, 200);
+    pClient->setConnectTimeout(5);
+
+    if (!pClient->isConnected()) {
+        if (!pClient->connect(*pAddress)) {
+            Serial.println("连接失败");
+            return false;
         }
     }
-};
 
-bool connectToDevice(BLEAdvertisedDevice* targetDevice, void (*callback)(BLERemoteCharacteristic*, uint8_t*, size_t, bool)) {
-    Serial.print("正在连接: ");
-    Serial.println(targetDevice->getName().c_str());
-    
-    BLEClient* pClient = BLEDevice::createClient();
-    
-    // 给射频模块 100ms 喘息时间
-    delay(100); 
-
-    if (!pClient->connect(targetDevice)) {
-        Serial.println("连接失败，等待下次扫描");
-        pClient->disconnect();  // 新增：释放客户端，防止内存泄漏
-        delete pClient;         // 新增：销毁对象，优化内存
-        return false;
-    }
-    
-    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
+    NimBLERemoteService* pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr) {
-        Serial.println("未找到目标服务UUID");
+        Serial.println("未找到服务 UUID");
         pClient->disconnect();
-        delete pClient;
         return false;
     }
-    
-    BLERemoteCharacteristic* pRemoteChar = pRemoteService->getCharacteristic(charUUID);
+
+    NimBLERemoteCharacteristic* pRemoteChar = pRemoteService->getCharacteristic(charUUID);
     if (pRemoteChar == nullptr) {
-        Serial.println("未找到目标特征值UUID");
+        Serial.println("未找到特征值 UUID");
         pClient->disconnect();
-        delete pClient;
         return false;
     }
-    
+
     if (pRemoteChar->canNotify()) {
-        pRemoteChar->registerForNotify(callback);
+        if (isRed) {
+            pRemoteChar->subscribe(true, redNotifyCallback);
+            pRedClient = pClient;
+        } else {
+            pRemoteChar->subscribe(true, greenNotifyCallback);
+            pGreenClient = pClient;
+        }
     }
-    Serial.println("✅ 特征值订阅成功");
+
+    Serial.println("✅ 连接并订阅成功");
     return true;
 }
+
+// =============================================================
+//  SETUP & LOOP
+// =============================================================
 
 void setup() {
     Serial.begin(115200);
@@ -245,96 +312,81 @@ void setup() {
     pinMode(BTN_NEXT, INPUT_PULLUP); 
     pinMode(BTN_RESET, INPUT_PULLUP);
     pinMode(LED_BOARD, OUTPUT);
-    digitalWrite(LED_BOARD, HIGH); // 初始灭灯
+    digitalWrite(LED_BOARD, HIGH);
 
-    //击中的灯
     pinMode(PIN_RED_LED, OUTPUT);
     pinMode(PIN_GRN_LED, OUTPUT);
     pinMode(PIN_BUZZER, OUTPUT);
 
     Serial.println("========================================");
-    Serial.println("   ESP32-S3 国际重剑计分裁判系统启动   ");
+    Serial.println("   ESP32-S3 (NimBLE) 重剑计分系统启动   ");
     Serial.println("========================================");
 
-    BLEDevice::init("epee_supmin");
-    BLEScan* pBLEScan = BLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    pBLEScan->setActiveScan(true); // 主动扫描
-    pBLEScan->setInterval(100);    // 扫描间隔
-    pBLEScan->setWindow(99);       // 扫描窗口接近间隔
+    NimBLEDevice::init("epee_supmin");
+    NimBLEDevice::setPower(ESP_PWR_LVL_P9); 
 
-    Serial.println("[系统] 正在开启初始扫描...");
-    pBLEScan->start(5, false);     // 每次只扫5秒，扫完会停，这样最稳
+    // 获取扫描对象
+    NimBLEScan* pBLEScan = NimBLEDevice::getScan();
+    
+    // 关键点：这里实例化回调类，此时 MyAdvertisedDeviceCallbacks 已经在上面定义过了
+    pBLEScan->setScanCallbacks(new MyScanCallbacks());
+    
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(99);
 }
 
 void loop() {
-    updateStatusLed();   // 维护连接状态灯
-    handleHitEffects();  // 维护击中后的声光效果
+    updateStatusLed();
+    handleHitEffects();
 
-    // --- 优化后的红方连接处理 + 重试计数+超次数提示 ---
-    if (doConnectRed && !redConnected && redRetryCount < MAX_CONNECT_RETRY) {
-        Serial.printf(">>> 准备连接红方 [当前重试次数: %d/%d] \n", redRetryCount+1, MAX_CONNECT_RETRY);
-        BLEDevice::getScan()->stop(); 
-        delay(500); // 关键：给底层协议栈 500ms 彻底退出的时间
-
-        if (connectToDevice(redDevice, redNotifyCallback)) {
-            Serial.println("[状态] ✅ epee_red 已上线");
+    // --- 1. 连接红方 ---
+    if (shouldConnectRed) {
+        shouldConnectRed = false;
+        delay(100); 
+        if (connectToServer(targetRedAddress, true)) {
             redConnected = true;
-            redRetryCount = 0; // 连接成功，重置重试计数
+            redRetryCount = 0;
         } else {
-            redRetryCount++;   // 连接失败，重试计数+1
-            Serial.printf("[错误] ❌ 红方连接失败，剩余重试次数: %d\n", MAX_CONNECT_RETRY - redRetryCount);
-            
-            // 新增：红方超过10次连接失败
-            if(redRetryCount >= MAX_CONNECT_RETRY){
-                Serial.println("==================================================");
-                Serial.println("⚠️ [严重错误] epee_red 连接重试超过10次！建议重启设备恢复！");
-                Serial.println("==================================================");
-                doConnectRed = false;
-            }
+            redRetryCount++;
+            Serial.printf("[错误] 红方连接失败 %d/%d\n", redRetryCount, MAX_CONNECT_RETRY);
+            if (redRetryCount >= MAX_CONNECT_RETRY) Serial.println("⚠️ 红方停止重试");
         }
-        doConnectRed = false; 
     }
 
-    // --- 优化后的绿方连接处理 + 重试计数+超次数提示 ---
-    if (doConnectGreen && !greenConnected && greenRetryCount < MAX_CONNECT_RETRY) {
-        Serial.printf(">>> 准备连接绿方 [当前重试次数: %d/%d] \n", greenRetryCount+1, MAX_CONNECT_RETRY);
-        BLEDevice::getScan()->stop();
-        delay(500); // 关键：冷静期
-
-        if (connectToDevice(greenDevice, greenNotifyCallback)) {
-            Serial.println("[状态] ✅ epee_green 已上线");
+    // --- 2. 连接绿方 ---
+    if (shouldConnectGreen) {
+        shouldConnectGreen = false;
+        delay(100);
+        if (connectToServer(targetGreenAddress, false)) {
             greenConnected = true;
-            greenRetryCount = 0; // 连接成功，重置重试计数
+            greenRetryCount = 0;
         } else {
-            greenRetryCount++;   // 连接失败，重试计数+1
-            Serial.printf("[错误] ❌ 绿方连接失败，剩余重试次数: %d\n", MAX_CONNECT_RETRY - greenRetryCount);
+            greenRetryCount++;
+            Serial.printf("[错误] 绿方连接失败 %d/%d\n", greenRetryCount, MAX_CONNECT_RETRY);
+            if (greenRetryCount >= MAX_CONNECT_RETRY) Serial.println("⚠️ 绿方停止重试");
+        }
+    }
+
+    // --- 3. 自动扫描逻辑 ---
+    static unsigned long lastScanCheck = 0;
+    if (millis() - lastScanCheck > 2000) {
+        lastScanCheck = millis();
+        NimBLEScan* pScan = NimBLEDevice::getScan();
+        
+        bool needRed = (!redConnected && redRetryCount < MAX_CONNECT_RETRY);
+        bool needGreen = (!greenConnected && greenRetryCount < MAX_CONNECT_RETRY);
+
+        if ((needRed || needGreen) && !pScan->isScanning() && scan_count <= MAX_SCAN_RETRY) {
+            scan_count++;
+            Serial.printf("[系统] 启动扫描 (%d/%d) ...\n", scan_count, MAX_SCAN_RETRY);
             
-            // 新增：绿方超过10次连接失败
-            if(greenRetryCount >= MAX_CONNECT_RETRY){
-                Serial.println("==================================================");
-                Serial.println("⚠️ [严重错误] epee_green 连接重试超过10次！建议重启设备恢复！");
-                Serial.println("==================================================");
-                doConnectGreen = false;
-            }
-        }
-        doConnectGreen = false;
-    }
-
-    // --- 核心逻辑：如果有人没连上+重试次数没超，就开启扫描 ---
-    static unsigned long scanTimer = 0;
-    if ((( !redConnected && redRetryCount < MAX_CONNECT_RETRY ) || ( !greenConnected && greenRetryCount < MAX_CONNECT_RETRY ) ) 
-    && scan_count <= MAX_SCAN_RETRY) {
-        if (!doConnectRed && !doConnectGreen) {
-            if (millis() - scanTimer > 2000) { // 每2秒检查一次是否需要重启扫描
-                Serial.printf("[系统] 启动一轮新扫描,扫描次数%d \n", scan_count);
-                scan_count ++;
-                BLEDevice::getScan()->start(5, false); // 扫5秒
-                scanTimer = millis();
-            }
+            // start(时间, 是否继续扫描)
+            pScan->start(5, false); 
         }
     }
 
+    // --- 按钮处理 ---
     if (firstHitTime > 0 && !isLocked) {
         if (millis() - firstHitTime > 45) evaluateHit();
     }
@@ -360,6 +412,4 @@ void loop() {
     }
     lastNextState = currNext;
     lastResetState = currReset;
-
-    delay(1); 
 }
