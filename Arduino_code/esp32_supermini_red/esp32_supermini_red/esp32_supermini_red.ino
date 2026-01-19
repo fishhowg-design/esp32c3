@@ -1,4 +1,7 @@
-#include <NimBLEDevice.h>  // NimBLE唯一核心头文件，必写
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 
 // =====================【引脚定义 - 完美适配ESP32C3 Supermini 无冲突】=====================
 #define FENCING_PIN     8    // 重剑信号采集GPIO
@@ -21,26 +24,27 @@ bool hitLedIsOn = false;
 bool buzzerIsOn = false;
 int redScore = 0;
 bool deviceConnected = false;
+static BLE2902 ble2902Desc; // 解决内存泄漏 静态创建描述符
 
-// =====================【NimBLE相关变量】=====================
-NimBLEServer* pServer = NULL;
-NimBLECharacteristic* pCharacteristic = NULL;
+// =====================【BLE相关变量】=====================
+BLEServer* pServer = NULL;
+BLECharacteristic* pCharacteristic = NULL;
 
 /**
- * @brief NimBLE连接回调类 - 完美适配
+ * @brief BLE连接回调类
  */
-class MyServerCallbacks: public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer* pServer) {
+class MyServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     digitalWrite(LED_BLUETOOTH, HIGH);
     Serial.println("✅【红方-蓝牙】BLE计分主机 已成功连接！");
   };
 
-  void onDisconnect(NimBLEServer* pServer) {
+  void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     digitalWrite(LED_BLUETOOTH, LOW);
     Serial.println("❌【红方-蓝牙】与BLE主机断开连接！");
-    NimBLEDevice::startAdvertising();
+    BLEDevice::startAdvertising();
     Serial.println("✅【红方-蓝牙】重新开启广播，等待主机重连...");
   }
 };
@@ -52,43 +56,45 @@ void setup() {
   digitalWrite(LED_HIT, LOW);
   digitalWrite(LED_BLUETOOTH, LOW);
   digitalWrite(BUZZER_PIN, LOW);
-  pinMode(FENCING_PIN, INPUT_PULLUP); // 防浮空误触 保留原版最优配置
+  pinMode(FENCING_PIN, INPUT_PULLUP); // 防浮空误触
 
   Serial.begin(115200);
   Serial.println("==================================");
-  Serial.println("=== 重剑计分器（红方-ESP32C3 NimBLE终极版） ===");
+  Serial.println("=== 重剑计分器（红方-ESP32C3 完整版） ===");
   Serial.println("==================================");
 
-  // NimBLE初始化核心 - 极简无报错
-  NimBLEDevice::init(DEVICE_NAME);
-  pServer = NimBLEDevice::createServer();
+  // BLE初始化核心 - 修复Notify权限 必加 INDICATE
+  BLEDevice::init(DEVICE_NAME);
+  pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
-  NimBLEService* pService = pServer->createService(SERVICE_UUID);
+  BLEService* pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID,
-                      NIMBLE_PROPERTY::READ |
-                      NIMBLE_PROPERTY::WRITE |
-                      NIMBLE_PROPERTY::NOTIFY |
-                      NIMBLE_PROPERTY::INDICATE
+                      BLECharacteristic::PROPERTY_READ |
+                      BLECharacteristic::PROPERTY_WRITE |
+                      BLECharacteristic::PROPERTY_NOTIFY |  // 原始保留
+                      BLECharacteristic::PROPERTY_INDICATE  // ✅ 关键新增 缺一不可
                     );
   
-  // ✅ 关键修复：删掉 ble2902Desc 相关所有代码，NimBLE自动生成2902描述符，无需手动添加
+  pCharacteristic->addDescriptor(&ble2902Desc);
   pCharacteristic->setValue("RED:0");
   pService->start();
 
-  // ✅ 关键修复：NimBLE标准广播配置，删除所有报错的无效函数
-  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
   pAdvertising->setName(DEVICE_NAME);
-  NimBLEDevice::startAdvertising();
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x12);
+  pAdvertising->start();
 
   Serial.println("📶【红方-蓝牙】广播启动成功，设备名：epee_red");
   Serial.println("🟥【红方-就绪】重剑采集就绪，等待击中信号！");
 }
 
 void loop() {
-  // 重剑信号采集+消抖逻辑 完全原版不动，最优逻辑保留
+  // 重剑信号采集+消抖逻辑 不变
   bool currentReading = digitalRead(FENCING_PIN);
   currentReading = !currentReading;
 
@@ -104,8 +110,8 @@ void loop() {
       }
     }
   }
-
-  // ✅ 原版修复：指示灯+蜂鸣器自动关闭逻辑，必开，解决常亮常响问题
+/*
+  // 击中指示灯+蜂鸣器时序控制
   if (hitLedIsOn || buzzerIsOn) {
     unsigned long now = millis();
     if (buzzerIsOn && (now - hitLedOnTime) >= 200) {
@@ -117,12 +123,12 @@ void loop() {
       hitLedIsOn = false;
     }
   }
-
+*/
   lastHitState = currentReading;
 }
 
 /**
- * @brief 击中事件处理函数 - 原版完美逻辑，无任何修改，计分精准无丢包
+ * @brief 击中事件处理函数 - ✅ 修复连接状态判断 绝对准确
  */
 void hitEvent() {
   digitalWrite(LED_HIT, HIGH);
@@ -138,8 +144,8 @@ void hitEvent() {
   Serial.print(" | 红方得分：");
   Serial.println(redScore);
 
-  // ✅ 原版最优连接判断，杜绝空包推送，适配所有BLE主机
-  NimBLEServer *pServer = NimBLEDevice::getServer();
+  // ✅ 关键修复：使用库原生连接判断，杜绝发空包，适配最新Arduino BLE库
+  BLEServer *pServer = BLEDevice::getServer();
   if (pServer != NULL && pServer->getConnectedCount() > 0) {
     String scoreData = "time:" + timeStr + "|RED:" + String(redScore);
     pCharacteristic->setValue(scoreData.c_str());
