@@ -87,7 +87,7 @@ void resetMatch(bool total) {
     digitalWrite(PIN_RED_LED, LOW);
     digitalWrite(PIN_GRN_LED, LOW);
     digitalWrite(PIN_BUZZER, LOW);
-    lockedPrintf("[SYSTEM] %s | Score: R%d - G%d\n", total ? "FULL RESET" : "NEXT POINT", redScore, greenScore);
+    lockedPrintf("[系统] %s | 比分: 红%d - 绿%d\n", total ? "全部重置" : "下一分开始", redScore, greenScore);
 }
 
 void evaluateHit() {
@@ -100,17 +100,17 @@ void evaluateHit() {
         redScore++; greenScore++;
         digitalWrite(PIN_RED_LED, HIGH);
         digitalWrite(PIN_GRN_LED, HIGH);
-        lockedPrintf("[JUDGE] DOUBLE HIT! (Time Diff: %d ms)\n", abs((int)(redHitTimestamp - greenHitTimestamp)));
+        lockedPrintf("[裁判] 双方同时击中! (时间差: %d 毫秒)\n", abs((int)(redHitTimestamp - greenHitTimestamp)));
     } else if (redHitReceived) {
         redScore++;
         digitalWrite(PIN_RED_LED, HIGH);
-        lockedPrintln("[JUDGE] RED POINT");
+        lockedPrintln("[裁判] red得分");
     } else if (greenHitReceived) {
         greenScore++;
         digitalWrite(PIN_GRN_LED, HIGH);
-        lockedPrintln("[JUDGE] GREEN POINT");
+        lockedPrintln("[裁判] green得分");
     }
-    lockedPrintf("[SCORE] RED %d : %d GREEN\n", redScore, greenScore);
+    lockedPrintf("[比分] red %d : %d green\n", redScore, greenScore);
 }
 
 void handleHitEffects() {
@@ -121,7 +121,7 @@ void handleHitEffects() {
         digitalWrite(PIN_RED_LED, LOW);
         digitalWrite(PIN_GRN_LED, LOW);
         effectActive = false;
-        lockedPrintln("[SYSTEM] Effect Finished. Waiting for Reset.");
+        lockedPrintln("[系统] 声光效果结束，等待重置");
     }
 }
 
@@ -131,7 +131,7 @@ void checkButtons() {
     if (lastNext == HIGH && currNext == LOW) {
         vTaskDelay(pdMS_TO_TICKS(50)); 
         if (digitalRead(BTN_NEXT) == LOW) {
-            lockedPrintln("[INPUT] NEXT Button Pressed");
+            lockedPrintln("[按键] 下一分按键被按下");
             resetMatch(false);
         }
     }
@@ -142,7 +142,7 @@ void checkButtons() {
     if (lastReset == HIGH && currReset == LOW) {
         vTaskDelay(pdMS_TO_TICKS(50));
         if (digitalRead(BTN_RESET) == LOW) {
-            lockedPrintln("[INPUT] RESET Button Pressed");
+            lockedPrintln("[按键] 重置按键被按下");
             resetMatch(true);
         }
     }
@@ -159,8 +159,8 @@ void updateStatusLed() {
     /*
     // 每 5 秒打印一次连接状态，避免刷屏
     if (millis() - lastStatusPrint > 5000) {
-        lockedPrintf("[STATUS] Connection: RED:%s | GREEN:%s\n", 
-                     redConnected ? "ON" : "OFF", greenConnected ? "ON" : "OFF");
+        lockedPrintf("[状态] 连接状态: red:%s | green:%s\n", 
+                     redConnected ? "已连接" : "未连接", greenConnected ? "已连接" : "未连接");
         lastStatusPrint = millis();
     }
     */
@@ -168,50 +168,50 @@ void updateStatusLed() {
 
 bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteristic*, uint8_t*, size_t, bool), String side) {
     if (target == nullptr) return false;
-    lockedPrintf("[BLE] Starting connection to %s...\n", side.c_str());
+    lockedPrintf("[蓝牙] 开始连接%s设备...\n", side.c_str());
     
     BLEClient* pClient = BLEDevice::createClient();
     if (!pClient->connect(target)) {
-        lockedPrintf("[BLE] Failed to connect %s\n", side.c_str());
+        lockedPrintf("[蓝牙] %s设备连接失败\n", side.c_str());
         delete pClient;
         return false;
     }
     
     BLERemoteService* pSvc = pClient->getService(serviceUUID);
     if (pSvc == nullptr) { 
-        lockedPrintf("[BLE] Service not found on %s\n", side.c_str());
+        lockedPrintf("[蓝牙] %s设备未找到指定服务\n", side.c_str());
         pClient->disconnect(); delete pClient; return false; 
     }
     
     BLERemoteCharacteristic* pChar = pSvc->getCharacteristic(charUUID);
     if (pChar == nullptr) { 
-        lockedPrintf("[BLE] Characteristic not found on %s\n", side.c_str());
+        lockedPrintf("[蓝牙] %s设备未找到指定特征值\n", side.c_str());
         pClient->disconnect(); delete pClient; return false; 
     }
     
     if (pChar->canNotify()) {
         pChar->registerForNotify(cb);
-        lockedPrintf("[BLE] Notify registered for %s\n", side.c_str());
+        lockedPrintf("[蓝牙] %s设备通知已注册成功\n", side.c_str());
     }
     return true;
 }
 
 // =====================【任务回调与类】=====================
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-    lockedPrintln("[SIGNAL] RED RAW HIT!");
+    lockedPrintln("[信号] red原始击中信号!");
     if (!isLocked) {
         redHitRaw = true;
         redHitTimestamp = millis();
-        lockedPrintf("[SIGNAL] RED RAW HIT AT %u\n", redHitTimestamp);
+        lockedPrintf("[信号] red击中信号触发 时间戳: %u\n", redHitTimestamp);
     }
 }
 
 static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-    lockedPrintln("[SIGNAL] GREEN RAW HIT!");
+    lockedPrintln("[信号] green原始击中信号!");
     if (!isLocked) {
         greenHitRaw = true;
         greenHitTimestamp = millis();
-        lockedPrintf("[SIGNAL] GREEN RAW HIT AT %u\n", greenHitTimestamp);
+        lockedPrintf("[信号] green击中信号触发 时间戳: %u\n", greenHitTimestamp);
     }
 }
 
@@ -219,11 +219,11 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         String name = advertisedDevice.getName().c_str();
         if (name == "epee_red" && !redConnected && !doConnectRed) {
-            lockedPrintln("[SCAN] Found EPEE_RED!");
+            lockedPrintln("[扫描] 发现red重剑设备!");
             redDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnectRed = true;
         } else if (name == "epee_green" && !greenConnected && !doConnectGreen) {
-            lockedPrintln("[SCAN] Found EPEE_GREEN!");
+            lockedPrintln("[扫描] 发现green重剑设备!");
             greenDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnectGreen = true;
         }
@@ -233,14 +233,14 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 // =====================【多核任务函数】=====================
 
 void TaskLogic(void *pvParameters) {
-    lockedPrintln("[CORE 1] Logic Task Started");
+    lockedPrintln("[核心1] 逻辑任务已启动");
     for (;;) {
         updateStatusLed();
         if (!isLocked) {
             if (redHitRaw) {
                 if (firstHitTime == 0) {
                     firstHitTime = redHitTimestamp;
-                    lockedPrintf("[LOGIC] Red triggered window at %u\n", firstHitTime);
+                    lockedPrintf("[逻辑] red触发判定窗口 时间戳: %u\n", firstHitTime);
                 }
                 if (redHitTimestamp - firstHitTime <= 40) redHitReceived = true;
                 redHitRaw = false;
@@ -248,7 +248,7 @@ void TaskLogic(void *pvParameters) {
             if (greenHitRaw) {
                 if (firstHitTime == 0) {
                     firstHitTime = greenHitTimestamp;
-                    lockedPrintf("[LOGIC] Green triggered window at %u\n", firstHitTime);
+                    lockedPrintf("[逻辑] green触发判定窗口 时间戳: %u\n", firstHitTime);
                 }
                 if (greenHitTimestamp - firstHitTime <= 40) greenHitReceived = true;
                 greenHitRaw = false;
@@ -264,17 +264,17 @@ void TaskLogic(void *pvParameters) {
 }
 
 void TaskBLE(void *pvParameters) {
-    lockedPrintln("[CORE 0] BLE Task Started");
+    lockedPrintln("[核心0] 蓝牙任务已启动");
     for (;;) {
         if (doConnectRed && !redConnected && redRetryCount < MAX_CONNECT_RETRY) {
-            if (connectToDevice(redDevice, redNotifyCallback, "RED")) {
+            if (connectToDevice(redDevice, redNotifyCallback, "red")) {
                 redConnected = true;
                 redRetryCount = 0;
             } else { redRetryCount++; }
             doConnectRed = false;
         }
         if (doConnectGreen && !greenConnected && greenRetryCount < MAX_CONNECT_RETRY) {
-            if (connectToDevice(greenDevice, greenNotifyCallback, "GREEN")) {
+            if (connectToDevice(greenDevice, greenNotifyCallback, "green")) {
                 greenConnected = true;
                 greenRetryCount = 0;
             } else { greenRetryCount++; }
@@ -299,7 +299,7 @@ void setup() {
     
     delay(1000); 
     lockedPrintln("\n==============================");
-    lockedPrintln("   EPEE S3 SYSTEM STARTING...  ");
+    lockedPrintln("    重剑计分系统 S3 启动中...");
     lockedPrintln("==============================");
 
     pinMode(PIN_RED_LED, OUTPUT);
@@ -319,7 +319,7 @@ void setup() {
     xTaskCreatePinnedToCore(TaskLogic, "Logic", 8192, NULL, 2, NULL, 1);
     xTaskCreatePinnedToCore(TaskBLE, "BLE", 8192, NULL, 1, NULL, 0);
     
-    lockedPrintln("[SYSTEM] Tasks Pinned to Cores.");
+    lockedPrintln("[系统] 所有任务已绑定至对应核心");
 }
 
 void loop() {
