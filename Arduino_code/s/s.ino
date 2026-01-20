@@ -17,8 +17,8 @@ void setup() {
   led_connected_green();
   delay(2000);
   
-  // 模拟双连
-  led_connected_both();
+    // 模拟双连
+    led_connected_both();
   delay(2000);
   
   // 模拟红色击中
