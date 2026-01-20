@@ -115,15 +115,19 @@ void evaluateHit() {
     redScore++;
     greenScore++;
     digitalWrite(PIN_RED_LED, HIGH);
+  
     digitalWrite(PIN_GRN_LED, HIGH);
+   
     lockedPrintf("[裁判] 双方同时击中! (时间差: %d 毫秒)\n", abs((int)(redHitTimestamp - greenHitTimestamp)));
   } else if (redHitReceived) {
     redScore++;
     digitalWrite(PIN_RED_LED, HIGH);
+  
     lockedPrintln("[裁判] red得分");
   } else if (greenHitReceived) {
     greenScore++;
     digitalWrite(PIN_GRN_LED, HIGH);
+    
     lockedPrintln("[裁判] green得分");
   }
   lockedPrintf("[比分] red %d : %d green\n", redScore, greenScore);
@@ -257,6 +261,7 @@ bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteri
 // =====================【任务回调与类】=====================
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
   lockedPrintln("[信号] red原始击中信号!");
+    led_hit_red();
   if (!isLocked) {
     redHitRaw = true;
     redHitTimestamp = millis();
@@ -266,6 +271,7 @@ static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, si
 
 static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
   lockedPrintln("[信号] green原始击中信号!");
+   led_hit_green(); 
   if (!isLocked) {
     greenHitRaw = true;
     greenHitTimestamp = millis();
