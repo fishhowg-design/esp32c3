@@ -4,3 +4,15 @@ UUID: 69198e18-165d-4f0c-8025-bdc7fe8f2a5c
 RSSI: -49 dBm
 Last advertisement packet:
 Raw data: 0x02010611074B9131C3C9C5CC8F9E45B51F01C2AF4F0512120012000B09657065655F677265656E
+
+
+esp32c3supermini-无引脚
+48:f6:ee:23:21:9c
+
+//esp32c3 normal Mac地址
+22:47:25.251 -> ESP32 MAC地址信息：
+22:47:25.296 -> 字符串格式：10:20:BA:CD:35:7C
+22:47:25.296 -> 十六进制格式（ESP-NOW用）：0x10, 0x20, 0xBA, 0xCD, 0x35, 0x7C
+
+//S3
+b8:f8:62:62:bd:b8
