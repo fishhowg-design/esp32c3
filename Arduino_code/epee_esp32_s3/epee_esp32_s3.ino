@@ -5,15 +5,21 @@
 #include "led_controller.h"
 #include "ScoreManager.h"
 #include "ScoreDisplay.h"
+#include "FencingTimer.h" // [TIMER_MOD] 引入计时器头文件
 
 // =====================【参数与引脚】=====================
-// 完全保留你原有定义，无任何修改
 const int PIN_RED_LED = 4;
 const int PIN_GRN_LED = 5;
 const int PIN_BUZZER = 3;
-const int BTN_NEXT = 7;
-const int BTN_RESET = 6;
+const int BTN_NEXT = 7;    // [TIMER_MOD] 复用：下一分/起动暂停
+const int BTN_RESET = 6;   // [TIMER_MOD] 复用：比分重置/时间重置
+const int BTN_PHASE = 15;  // [TIMER_MOD] 新增：阶段切换(休息/比赛)
+const int BTN_MODE = 16;   // [TIMER_MOD] 新增：3m/5m切换
 const int LED_BOARD = 8;
+
+// [TIMER_MOD] 计时器显示引脚 (请确保这两个引脚未被占用)
+#define TIMER_CLK_PIN 14 
+#define TIMER_DIO_PIN 21
 
 const unsigned long LIGHT_DURATION = 3000;
 const unsigned long BEEP_DURATION = 800;
@@ -25,15 +31,13 @@ static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 
 // --- 串口互斥锁 ---
 SemaphoreHandle_t serialMutex;
-
 // --- 全局比分管理实例（替换原有redScore/greenScore全局变量）---
 ScoreManager scoreManager;
-
 //控制TM1637 
 ScoreDisplay scoreDisplay;
+FencingTimer fencingTimer; // [TIMER_MOD] 实例化计时器
 
 // =====================【串口锁定打印函数】=====================
-// 完全保留原有实现
 void lockedPrintf(const char* format, ...) {
   if (serialMutex == NULL) return;
   if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
@@ -56,24 +60,19 @@ void lockedPrintln(String msg) {
 }
 
 // =====================【分数变化回调函数】=====================
-// 核心：你可以在这个函数里实现任意分数操作后的自定义逻辑
-// 比如：刷新显示屏、发送蓝牙分数、记录日志、控制外设等
 void onScoreChanged(int redScore, int greenScore, bool isReset) {
   if (isReset) {
     lockedPrintf("[比分回调] 分数重置 | 红%d - 绿%d\n", redScore, greenScore);
-    // 重置后的自定义操作写这里，例：lcdShowScore(redScore, greenScore);
-    // 初始化比分显示
     scoreDisplay.begin();
     scoreDisplay.setScore(redScore, greenScore);
+    fencingTimer.resetTimer(); // [TIMER_MOD] 分数重置时同步重置时间
   } else {
     lockedPrintf("[比分回调] 分数更新 | 红%d - 绿%d\n", redScore, greenScore);
-    // 分数更新后的自定义操作写这里，例：bleSendScore(redScore, greenScore);
     scoreDisplay.setScore(redScore, greenScore);
   }
 }
 
 // =====================【跨核同步变量】=====================
-// 完全保留原有定义，无任何修改
 volatile bool redHitRaw = false;
 volatile bool greenHitRaw = false;
 volatile uint32_t redHitTimestamp = 0;
@@ -86,7 +85,6 @@ BLEClient* greenClient = nullptr;
 unsigned long lastConnectionCheck = 0;
 
 // =====================【逻辑变量】=====================
-// 移除原有redScore/greenScore，其余完全保留
 unsigned long firstHitTime = 0;
 bool isLocked = false;
 bool redHitReceived = false;
@@ -102,7 +100,6 @@ int redRetryCount = 0;
 int greenRetryCount = 0;
 
 // =====================【前置函数声明区】=====================
-// 完全保留原有声明，无任何修改
 void resetMatch(bool total);
 void evaluateHit();
 void handleHitEffects();
@@ -112,11 +109,8 @@ void checkBLEConnectionStatus();
 
 // =====================【核心功能函数】=====================
 void resetMatch(bool total) {
-  // 替换为比分类的重置方法
   scoreManager.reset(total);
   
-  
-  // 其余逻辑完全保留，无任何修改
   isLocked = false;
   redHitReceived = false;
   greenHitReceived = false;
@@ -127,20 +121,22 @@ void resetMatch(bool total) {
   digitalWrite(PIN_GRN_LED, LOW);
   digitalWrite(PIN_BUZZER, LOW);
   
-  // 通过比分类获取最新分数
   int red = scoreManager.getRedScore();
   int green = scoreManager.getGreenScore();
   lockedPrintf("[系统] %s | 比分: 红%d - 绿%d\n", total ? "全部重置" : "下一分开始", red, green);
 }
 
 void evaluateHit() {
-  // 原有声光、锁定逻辑完全保留
   isLocked = true;
   hitEffectStartTime = millis();
   effectActive = true;
   digitalWrite(PIN_BUZZER, HIGH);
 
-  // 替换为比分类的加分方法
+  // [TIMER_MOD] 击中判定瞬间自动暂停计时，方便裁判查看
+  if (fencingTimer.isTimerRunning()) {
+    fencingTimer.toggleStartPause();
+  }
+
   if (redHitReceived && greenHitReceived) {
     scoreManager.addBothScores();
     digitalWrite(PIN_RED_LED, HIGH);
@@ -162,7 +158,6 @@ void evaluateHit() {
   lockedPrintf("[比分] red %d : %d green\n", red, green);
 }
 
-// 以下函数完全保留原有实现，无任何修改
 void handleHitEffects() {
   if (!effectActive) return;
   unsigned long elapsed = millis() - hitEffectStartTime;
@@ -175,30 +170,64 @@ void handleHitEffects() {
   }
 }
 
+// =====================【按键逻辑融合 - TIMER_MOD】=====================
 void checkButtons() {
+  // --- BTN_NEXT (7): 灭灯 或 启动/暂停 ---
   static bool lastNext = HIGH;
   bool currNext = digitalRead(BTN_NEXT);
   if (lastNext == HIGH && currNext == LOW) {
     vTaskDelay(pdMS_TO_TICKS(50));
     if (digitalRead(BTN_NEXT) == LOW) {
-      lockedPrintln("[按键] 下一分按键被按下");
-      resetMatch(false);
+      if (isLocked) {
+        lockedPrintln("[按键] 下一分准备 (灭灯)");
+        resetMatch(false);
+      } else {
+        fencingTimer.toggleStartPause();
+        lockedPrintf("[计时] %s\n", fencingTimer.isTimerRunning() ? "开始" : "暂停");
+      }
     }
   }
   lastNext = currNext;
 
+  // --- BTN_RESET (6): 彻底重置 ---
   static bool lastReset = HIGH;
   bool currReset = digitalRead(BTN_RESET);
   if (lastReset == HIGH && currReset == LOW) {
     vTaskDelay(pdMS_TO_TICKS(50));
     if (digitalRead(BTN_RESET) == LOW) {
-      lockedPrintln("[按键] 重置按键被按下");
+      lockedPrintln("[按键] 全局重置 (分数+时间)");
       resetMatch(true);
+      fencingTimer.resetTimer();
     }
   }
   lastReset = currReset;
+
+  // --- BTN_PHASE (15): 进入/退出休息 ---
+  static bool lastPhase = HIGH;
+  bool currPhase = digitalRead(BTN_PHASE);
+  if (lastPhase == HIGH && currPhase == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    if (digitalRead(BTN_PHASE) == LOW) {
+      fencingTimer.nextPhase();
+      lockedPrintln(fencingTimer.isResting() ? "[计时] 进入休息模式" : "[计时] 重回比赛模式");
+    }
+  }
+  lastPhase = currPhase;
+
+  // --- BTN_MODE (16): 切换 3min/5min ---
+  static bool lastMode = HIGH;
+  bool currMode = digitalRead(BTN_MODE);
+  if (lastMode == HIGH && currMode == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    if (digitalRead(BTN_MODE) == LOW) {
+      fencingTimer.toggleDurationMode();
+      lockedPrintf("[计时] 切换至 %d 分钟赛制\n", fencingTimer.getCurrentDurationMode());
+    }
+  }
+  lastMode = currMode;
 }
 
+// =====================【蓝牙部分 (无修改)】=====================
 void updateBLEStatusLed() {
   if (redConnected && greenConnected) {
     led_connected_both();
@@ -315,29 +344,36 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 };
 
 // =====================【多核任务函数】=====================
-// 完全保留原有实现，无任何修改
 void TaskLogic(void* pvParameters) {
   lockedPrintln("[核心1] 逻辑任务已启动");
+  
+  // [TIMER_MOD] 显式初始化计时器显示屏
+  fencingTimer.begin(); 
+
   for (;;) {
+    // [TIMER_MOD] 驱动计时器跳动
+    fencingTimer.update();
+
     if (!isLocked) {
-      if (redHitRaw) {
-        if (firstHitTime == 0) {
-          firstHitTime = redHitTimestamp;
-          lockedPrintf("[逻辑] red触发判定窗口 时间戳: %u\n", firstHitTime);
-        }
-        if (redHitTimestamp - firstHitTime <= 40) redHitReceived = true;
-        redHitRaw = false;
-      }
-      if (greenHitRaw) {
-        if (firstHitTime == 0) {
-          firstHitTime = greenHitTimestamp;
-          lockedPrintf("[逻辑] green触发判定窗口 时间戳: %u\n", firstHitTime);
-        }
-        if (greenHitTimestamp - firstHitTime <= 40) greenHitReceived = true;
-        greenHitRaw = false;
-      }
-      if (firstHitTime > 0 && (millis() - firstHitTime > 45)) {
-        evaluateHit();
+      // 只有在计时器运行时才处理击中判定（训练模式如需常开可修改此条）
+      if (fencingTimer.isTimerRunning()) {
+          if (redHitRaw) {
+            if (firstHitTime == 0) firstHitTime = redHitTimestamp;
+            if (redHitTimestamp - firstHitTime <= 40) redHitReceived = true;
+            redHitRaw = false;
+          }
+          if (greenHitRaw) {
+            if (firstHitTime == 0) firstHitTime = greenHitTimestamp;
+            if (greenHitTimestamp - firstHitTime <= 40) greenHitReceived = true;
+            greenHitRaw = false;
+          }
+          if (firstHitTime > 0 && (millis() - firstHitTime > 45)) {
+            evaluateHit();
+          }
+      } else {
+          // 如果计时器没开却收到信号，直接清掉
+          redHitRaw = false;
+          greenHitRaw = false;
       }
     }
     handleHitEffects();
@@ -382,7 +418,7 @@ void TaskBLE(void* pvParameters) {
 void setup() {
   Serial.begin(115200);
   serialMutex = xSemaphoreCreateMutex();
-  // 原有LED初始化完全保留
+  
   led_init();
   led_on_boot();
   // 初始化比分显示
@@ -390,7 +426,7 @@ void setup() {
 
   delay(1000);
   lockedPrintln("\n==============================");
-  lockedPrintln("    重剑计分系统 S3 启动中...");
+  lockedPrintln("    重剑计分系统 S3 (带计时) 启动...");
   lockedPrintln("==============================");
 
   // 原有引脚初始化完全保留
@@ -399,9 +435,10 @@ void setup() {
   pinMode(PIN_BUZZER, OUTPUT);
   pinMode(BTN_NEXT, INPUT_PULLUP);
   pinMode(BTN_RESET, INPUT_PULLUP);
+  pinMode(BTN_PHASE, INPUT_PULLUP); // [TIMER_MOD]
+  pinMode(BTN_MODE, INPUT_PULLUP);  // [TIMER_MOD]
   pinMode(LED_BOARD, OUTPUT);
 
-  // 原有BLE初始化完全保留
   BLEDevice::init("epee_master_s3");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -412,14 +449,12 @@ void setup() {
   // 初始化比分回调函数（核心新增，仅这一行）
   scoreManager.setScoreChangeCallback(onScoreChanged);
 
-  // 原有任务创建完全保留
   xTaskCreatePinnedToCore(TaskLogic, "Logic", 8192, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(TaskBLE, "BLE", 8192, NULL, 1, NULL, 0);
 
-  lockedPrintln("[系统] 所有任务已绑定至对应核心");
+  lockedPrintln("[系统] 计分与计时任务已就绪");
 }
 
 void loop() {
-  // 完全保留原有实现
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
