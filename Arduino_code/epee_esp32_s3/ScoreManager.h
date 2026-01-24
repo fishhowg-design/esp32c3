@@ -30,6 +30,12 @@ public:
   // 绿方加分
   void addGreenScore();
 
+  // 红方减分
+  void subtractRedScore();  // 新增：红方减分
+
+  // 绿方减分
+  void subtractGreenScore();// 新增：绿方减分
+
   // 双方同时加分 (平局场景)
   void addBothScores();
 

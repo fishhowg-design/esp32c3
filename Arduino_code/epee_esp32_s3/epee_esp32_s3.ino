@@ -17,9 +17,15 @@ const int BTN_PHASE = 15;  // [TIMER_MOD] 新增：阶段切换(休息/比赛)
 const int BTN_MODE = 16;   // [TIMER_MOD] 新增：3m/5m切换
 const int LED_BOARD = 8;
 
+// 新增手动加减分引脚定义
+const int BTN_RED_ADD = 14;    // 红方+1分
+const int BTN_RED_SUB = 9;     // 红方-1分
+const int BTN_GREEN_ADD = 17;  // 绿方+1分
+const int BTN_GREEN_SUB = 18;  // 绿方-1分
+
 // [TIMER_MOD] 计时器显示引脚 (请确保这两个引脚未被占用)
-#define TIMER_CLK_PIN 14 
-#define TIMER_DIO_PIN 21
+#define TIMER_CLK_PIN 1 
+#define TIMER_DIO_PIN 2
 
 const unsigned long LIGHT_DURATION = 3000;
 const unsigned long BEEP_DURATION = 800;
@@ -225,6 +231,55 @@ void checkButtons() {
     }
   }
   lastMode = currMode;
+
+  // ===================== 新增手动加减分按键逻辑 =====================
+  // --- BTN_RED_ADD (14): 红方+1分 ---
+  static bool lastRedAdd = HIGH;
+  bool currRedAdd = digitalRead(BTN_RED_ADD);
+  if (lastRedAdd == HIGH && currRedAdd == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50)); // 消抖
+    if (digitalRead(BTN_RED_ADD) == LOW) {
+      lockedPrintln("[按键] 手动红方+1分");
+      scoreManager.addRedScore(); // 调用ScoreManager加分函数
+    }
+  }
+  lastRedAdd = currRedAdd;
+
+  // --- BTN_RED_SUB (9): 红方-1分 ---
+  static bool lastRedSub = HIGH;
+  bool currRedSub = digitalRead(BTN_RED_SUB);
+  if (lastRedSub == HIGH && currRedSub == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50)); // 消抖
+    if (digitalRead(BTN_RED_SUB) == LOW) {
+      lockedPrintln("[按键] 手动红方-1分");
+      scoreManager.subtractRedScore(); // 调用ScoreManager减分函数
+    }
+  }
+  lastRedSub = currRedSub;
+
+  // --- BTN_GREEN_ADD (17): 绿方+1分 ---
+  static bool lastGreenAdd = HIGH;
+  bool currGreenAdd = digitalRead(BTN_GREEN_ADD);
+  if (lastGreenAdd == HIGH && currGreenAdd == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50)); // 消抖
+    if (digitalRead(BTN_GREEN_ADD) == LOW) {
+      lockedPrintln("[按键] 手动绿方+1分");
+      scoreManager.addGreenScore(); // 调用ScoreManager加分函数
+    }
+  }
+  lastGreenAdd = currGreenAdd;
+
+  // --- BTN_GREEN_SUB (18): 绿方-1分 ---
+  static bool lastGreenSub = HIGH;
+  bool currGreenSub = digitalRead(BTN_GREEN_SUB);
+  if (lastGreenSub == HIGH && currGreenSub == LOW) {
+    vTaskDelay(pdMS_TO_TICKS(50)); // 消抖
+    if (digitalRead(BTN_GREEN_SUB) == LOW) {
+      lockedPrintln("[按键] 手动绿方-1分");
+      scoreManager.subtractGreenScore(); // 调用ScoreManager减分函数
+    }
+  }
+  lastGreenSub = currGreenSub;
 }
 
 // =====================【蓝牙部分 (无修改)】=====================
@@ -438,6 +493,12 @@ void setup() {
   pinMode(BTN_PHASE, INPUT_PULLUP); // [TIMER_MOD]
   pinMode(BTN_MODE, INPUT_PULLUP);  // [TIMER_MOD]
   pinMode(LED_BOARD, OUTPUT);
+
+  // 初始化新增的手动加减分引脚（INPUT_PULLUP模式）
+  pinMode(BTN_RED_ADD, INPUT_PULLUP);
+  pinMode(BTN_RED_SUB, INPUT_PULLUP);
+  pinMode(BTN_GREEN_ADD, INPUT_PULLUP);
+  pinMode(BTN_GREEN_SUB, INPUT_PULLUP);
 
   BLEDevice::init("epee_master_s3");
   BLEScan* pBLEScan = BLEDevice::getScan();

@@ -27,6 +27,30 @@ void ScoreManager::addGreenScore() {
   }
 }
 
+// 新增：红方减分
+void ScoreManager::subtractRedScore() {
+  // 防止分数为负数
+  if (_redScore > 0) {
+    _redScore--;
+  }
+  // 触发分数更新回调
+  if (_callback != nullptr) {
+    _callback(_redScore, _greenScore, false);
+  }
+}
+
+// 新增：绿方减分
+void ScoreManager::subtractGreenScore() {
+  // 防止分数为负数
+  if (_greenScore > 0) {
+    _greenScore--;
+  }
+  // 触发分数更新回调
+  if (_callback != nullptr) {
+    _callback(_redScore, _greenScore, false);
+  }
+}
+
 // 双方同时加分
 void ScoreManager::addBothScores() {
   _redScore++;
