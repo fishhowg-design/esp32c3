@@ -78,7 +78,7 @@ void ScoreManager::reset(bool total) {
   }
   // 触发回调 (isReset=true 表示是重置操作)
   if (_callback != nullptr) {
-    _callback(_redScore, _greenScore, true);
+    _callback(_redScore, _greenScore, total);
   }
 }
 

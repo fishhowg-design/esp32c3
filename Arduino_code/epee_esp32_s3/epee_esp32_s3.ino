@@ -187,6 +187,12 @@ void checkButtons() {
       if (isLocked) {
         lockedPrintln("[按键] 下一分准备 (灭灯)");
         resetMatch(false);
+        // ========== 新增：恢复计时器运行 ==========
+        if (!fencingTimer.isTimerRunning()) {
+          fencingTimer.toggleStartPause();
+          lockedPrintln("[计时] 恢复比赛计时");
+        }
+      // =========================================
       } else {
         fencingTimer.toggleStartPause();
         lockedPrintf("[计时] %s\n", fencingTimer.isTimerRunning() ? "开始" : "暂停");
