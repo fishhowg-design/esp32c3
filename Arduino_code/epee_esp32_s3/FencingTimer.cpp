@@ -99,6 +99,6 @@ void FencingTimer::refreshDisplay() {
     display.showNumberDecEx(displayValue, 0x40, true);
 }
 
-bool FencingTimer::isTimerRunning() { return isRunning; }
+bool FencingTimer::isTimerRunning() const { return isRunning; }
 int FencingTimer::getCurrentDurationMode() { return currentMaxDuration / 60; }
 bool FencingTimer::isResting() { return isRestMode; }

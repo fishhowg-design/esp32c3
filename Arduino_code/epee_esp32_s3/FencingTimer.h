@@ -21,7 +21,7 @@ public:
   void nextPhase(); // 核心逻辑修改
   void toggleDurationMode();
 
-  bool isTimerRunning();
+  bool isTimerRunning() const;
   int getCurrentDurationMode();
   bool isResting(); 
 
