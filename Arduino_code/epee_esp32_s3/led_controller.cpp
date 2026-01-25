@@ -66,3 +66,12 @@ void led_hit_red() {
 void led_hit_green() {
   led_set_color(0, LED_BRIGHTNESS, 0);
 }
+
+// ========== 新增缺失的函数 ==========
+void led_connected_all() {
+  led_set_color(LED_BRIGHTNESS, LED_BRIGHTNESS, LED_BRIGHTNESS);
+}
+
+void led_connected_remote() {
+  led_set_color(LED_BRIGHTNESS/2, 0, LED_BRIGHTNESS);
+}

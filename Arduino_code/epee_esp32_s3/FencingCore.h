@@ -53,6 +53,17 @@ public:
     void handleBtnGreenAdd();   // 绿方+1
     void handleBtnGreenSub();   // 绿方-1
 
+    // FencingCore.h 的 public 部分新增：
+// 遥控相关接口（映射8个按钮逻辑）
+void toggleTimerStartPause() { m_fencingTimer.toggleStartPause(); }
+void resetTimer() { m_fencingTimer.resetTimer(); }
+void nextPhase() { m_fencingTimer.nextPhase(); }
+void toggleDurationMode() { m_fencingTimer.toggleDurationMode(); }
+void addRedScore() { m_scoreManager.addRedScore(); }
+void subtractRedScore() { m_scoreManager.subtractRedScore(); }
+void addGreenScore() { m_scoreManager.addGreenScore(); }
+void subtractGreenScore() { m_scoreManager.subtractGreenScore(); }
+
 private:
     // ===================== 私有成员（不变）=====================
     FencingCore();

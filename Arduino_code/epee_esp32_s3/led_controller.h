@@ -27,6 +27,10 @@ void led_connected_both();
 void led_hit_red();
 void led_hit_green();
 
+// 新增声明
+void led_connected_all();    // 全部连接状态LED
+void led_connected_remote(); // 仅遥控连接状态LED
+
 // 辅助函数
 void led_set_color(uint8_t r, uint8_t g, uint8_t b);
 
