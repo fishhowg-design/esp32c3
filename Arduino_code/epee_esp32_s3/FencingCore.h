@@ -43,6 +43,16 @@ public:
     bool isLocked() const { return m_isLocked; }
     bool isTimerRunning() const { return m_fencingTimer.isTimerRunning(); } // const 匹配
 
+    // ===================== 新增：8个按钮独立处理函数（供蓝牙遥控调用）=====================
+    void handleBtnNext();       // 下一分/计时启停
+    void handleBtnReset();      // 全局重置
+    void handleBtnPhase();      // 切换休息/比赛阶段
+    void handleBtnMode();       // 切换计时时长模式
+    void handleBtnRedAdd();     // 红方+1
+    void handleBtnRedSub();     // 红方-1
+    void handleBtnGreenAdd();   // 绿方+1
+    void handleBtnGreenSub();   // 绿方-1
+
 private:
     // ===================== 私有成员（不变）=====================
     FencingCore();

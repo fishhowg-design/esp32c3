@@ -23,6 +23,10 @@ const unsigned long FencingCore::BEEP_DURATION = 800;
 const int FencingCore::HIT_TIME_WINDOW = 40;
 const int FencingCore::HIT_EVAL_DELAY = 45;
 
+extern void lockedPrintln(String msg);
+extern void lockedPrintf(const char* format, ...);
+
+
 // ===================== 单例实例初始化（不变）=====================
 FencingCore* FencingCore::s_instance = nullptr;
 FencingCore* FencingCore::getInstance() {
@@ -78,6 +82,124 @@ void FencingCore::init() {
     Serial.println("[FencingCore] 比分+计时+击中判定系统初始化完成");
 }
 
+// ===================== 新增：8个按钮独立处理函数实现 =====================
+void FencingCore::handleBtnNext() {
+    // 防抖（和物理按键逻辑一致）
+    vTaskDelay(pdMS_TO_TICKS(50));
+    if (m_isLocked) {
+        Serial.println("[按键] 下一分准备 (灭灯)");
+        resetMatch(false);
+        if (!m_fencingTimer.isTimerRunning()) {
+            m_fencingTimer.toggleStartPause();
+            Serial.println("[计时] 恢复比赛计时");
+        }
+    } else {
+        m_fencingTimer.toggleStartPause();
+        Serial.printf("[计时] %s\n", m_fencingTimer.isTimerRunning() ? "开始" : "暂停");
+    }
+}
+
+void FencingCore::handleBtnReset() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.println("[按键] 全局重置 (分数+时间)");
+    resetMatch(true);
+    m_fencingTimer.resetTimer();
+}
+
+void FencingCore::handleBtnPhase() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    m_fencingTimer.nextPhase();
+    Serial.println(m_fencingTimer.isResting() ? "[计时] 进入休息模式" : "[计时] 重回比赛模式");
+}
+
+void FencingCore::handleBtnMode() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    m_fencingTimer.toggleDurationMode();
+    Serial.printf("[计时] 切换至 %d 分钟赛制\n", m_fencingTimer.getCurrentDurationMode());
+}
+
+void FencingCore::handleBtnRedAdd() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.println("[按键] 手动红方+1分");
+    m_scoreManager.addRedScore();
+}
+
+void FencingCore::handleBtnRedSub() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.println("[按键] 手动红方-1分");
+    m_scoreManager.subtractRedScore();
+}
+
+void FencingCore::handleBtnGreenAdd() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.println("[按键] 手动绿方+1分");
+    m_scoreManager.addGreenScore();
+}
+
+void FencingCore::handleBtnGreenSub() {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.println("[按键] 手动绿方-1分");
+    m_scoreManager.subtractGreenScore();
+}
+
+// ===================== 调整checkButtons函数（调用封装的函数）=====================
+void FencingCore::checkButtons() {
+    static bool lastNext = HIGH, lastReset = HIGH, lastPhase = HIGH, lastMode = HIGH;
+    static bool lastRedAdd = HIGH, lastRedSub = HIGH, lastGreenAdd = HIGH, lastGreenSub = HIGH;
+
+    // BTN_NEXT
+    bool currNext = digitalRead(BTN_NEXT);
+    if (lastNext == HIGH && currNext == LOW) {
+        handleBtnNext(); // 调用封装的函数
+    }
+    lastNext = currNext;
+
+    // BTN_RESET
+    bool currReset = digitalRead(BTN_RESET);
+    if (lastReset == HIGH && currReset == LOW) {
+        handleBtnReset(); // 调用封装的函数
+    }
+    lastReset = currReset;
+
+    // BTN_PHASE
+    bool currPhase = digitalRead(BTN_PHASE);
+    if (lastPhase == HIGH && currPhase == LOW) {
+        handleBtnPhase(); // 调用封装的函数
+    }
+    lastPhase = currPhase;
+
+    // BTN_MODE
+    bool currMode = digitalRead(BTN_MODE);
+    if (lastMode == HIGH && currMode == LOW) {
+        handleBtnMode(); // 调用封装的函数
+    }
+    lastMode = currMode;
+
+    // 手动加减分
+    bool currRedAdd = digitalRead(BTN_RED_ADD);
+    bool currRedSub = digitalRead(BTN_RED_SUB);
+    bool currGreenAdd = digitalRead(BTN_GREEN_ADD);
+    bool currGreenSub = digitalRead(BTN_GREEN_SUB);
+
+    if (lastRedAdd == HIGH && currRedAdd == LOW) {
+        handleBtnRedAdd(); // 调用封装的函数
+    }
+    if (lastRedSub == HIGH && currRedSub == LOW) {
+        handleBtnRedSub(); // 调用封装的函数
+    }
+    if (lastGreenAdd == HIGH && currGreenAdd == LOW) {
+        handleBtnGreenAdd(); // 调用封装的函数
+    }
+    if (lastGreenSub == HIGH && currGreenSub == LOW) {
+        handleBtnGreenSub(); // 调用封装的函数
+    }
+
+    lastRedAdd = currRedAdd;
+    lastRedSub = currRedSub;
+    lastGreenAdd = currGreenAdd;
+    lastGreenSub = currGreenSub;
+}
+
 // ===================== 其他方法（完全不变，无需修改）=====================
 void FencingCore::updateTimer() {
     m_fencingTimer.update();
@@ -122,81 +244,6 @@ void FencingCore::handleHitEffects() {
         m_effectActive = false;
         Serial.println("[系统] 声光效果结束，等待重置");
     }
-}
-
-void FencingCore::checkButtons() {
-    static bool lastNext = HIGH, lastReset = HIGH, lastPhase = HIGH, lastMode = HIGH;
-    static bool lastRedAdd = HIGH, lastRedSub = HIGH, lastGreenAdd = HIGH, lastGreenSub = HIGH;
-
-    // BTN_NEXT
-    bool currNext = digitalRead(BTN_NEXT);
-    if (lastNext == HIGH && currNext == LOW) {
-        vTaskDelay(pdMS_TO_TICKS(50));
-        if (digitalRead(BTN_NEXT) == LOW) {
-            if (m_isLocked) {
-                Serial.println("[按键] 下一分准备 (灭灯)");
-                resetMatch(false);
-                if (!m_fencingTimer.isTimerRunning()) {
-                    m_fencingTimer.toggleStartPause();
-                    Serial.println("[计时] 恢复比赛计时");
-                }
-            } else {
-                m_fencingTimer.toggleStartPause();
-                Serial.printf("[计时] %s\n", m_fencingTimer.isTimerRunning() ? "开始" : "暂停");
-            }
-        }
-    }
-    lastNext = currNext;
-
-    // BTN_RESET
-    bool currReset = digitalRead(BTN_RESET);
-    if (lastReset == HIGH && currReset == LOW) {
-        vTaskDelay(pdMS_TO_TICKS(50));
-        if (digitalRead(BTN_RESET) == LOW) {
-            Serial.println("[按键] 全局重置 (分数+时间)");
-            resetMatch(true);
-            m_fencingTimer.resetTimer();
-        }
-    }
-    lastReset = currReset;
-
-    // BTN_PHASE
-    bool currPhase = digitalRead(BTN_PHASE);
-    if (lastPhase == HIGH && currPhase == LOW) {
-        vTaskDelay(pdMS_TO_TICKS(50));
-        if (digitalRead(BTN_PHASE) == LOW) {
-            m_fencingTimer.nextPhase();
-            Serial.println(m_fencingTimer.isResting() ? "[计时] 进入休息模式" : "[计时] 重回比赛模式");
-        }
-    }
-    lastPhase = currPhase;
-
-    // BTN_MODE
-    bool currMode = digitalRead(BTN_MODE);
-    if (lastMode == HIGH && currMode == LOW) {
-        vTaskDelay(pdMS_TO_TICKS(50));
-        if (digitalRead(BTN_MODE) == LOW) {
-            m_fencingTimer.toggleDurationMode();
-            Serial.printf("[计时] 切换至 %d 分钟赛制\n", m_fencingTimer.getCurrentDurationMode());
-        }
-    }
-    lastMode = currMode;
-
-    // 手动加减分
-    bool currRedAdd = digitalRead(BTN_RED_ADD);
-    bool currRedSub = digitalRead(BTN_RED_SUB);
-    bool currGreenAdd = digitalRead(BTN_GREEN_ADD);
-    bool currGreenSub = digitalRead(BTN_GREEN_SUB);
-
-    if (lastRedAdd == HIGH && currRedAdd == LOW) {vTaskDelay(50);if(digitalRead(BTN_RED_ADD)==LOW){Serial.println("[按键] 手动红方+1分");m_scoreManager.addRedScore();}}
-    if (lastRedSub == HIGH && currRedSub == LOW) {vTaskDelay(50);if(digitalRead(BTN_RED_SUB)==LOW){Serial.println("[按键] 手动红方-1分");m_scoreManager.subtractRedScore();}}
-    if (lastGreenAdd == HIGH && currGreenAdd == LOW) {vTaskDelay(50);if(digitalRead(BTN_GREEN_ADD)==LOW){Serial.println("[按键] 手动绿方+1分");m_scoreManager.addGreenScore();}}
-    if (lastGreenSub == HIGH && currGreenSub == LOW) {vTaskDelay(50);if(digitalRead(BTN_GREEN_SUB)==LOW){Serial.println("[按键] 手动绿方-1分");m_scoreManager.subtractGreenScore();}}
-
-    lastRedAdd = currRedAdd;
-    lastRedSub = currRedSub;
-    lastGreenAdd = currGreenAdd;
-    lastGreenSub = currGreenSub;
 }
 
 void FencingCore::setRedHit() {
