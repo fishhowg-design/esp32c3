@@ -4,6 +4,7 @@
 #include <BLEAdvertisedDevice.h>
 #include "led_controller.h"
 #include "FencingCore.h" // 仅引入封装类，无其他依赖
+#include "log_utils.h"
 
 // =====================【蓝牙相关常量（新增遥控设备配置）】=====================
 const int LED_BOARD = 8;
@@ -43,39 +44,18 @@ void updateBLEStatusLed();
 void checkBLEConnectionStatus();
 bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteristic*, uint8_t*, size_t, bool), String side, BLEUUID svcUUID, BLEUUID chrUUID); // 新增UUID参数
 
-// =====================【串口锁定打印（完全保留，未改动）】=====================
-void lockedPrintf(const char* format, ...) {
-  if (serialMutex == NULL) return;
-  if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
-    char buffer[128];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-    Serial.print(buffer);
-    xSemaphoreGive(serialMutex);
-  }
-}
-
-void lockedPrintln(String msg) {
-  if (serialMutex == NULL) return;
-  if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
-    Serial.println(msg);
-    xSemaphoreGive(serialMutex);
-  }
-}
 
 // =====================【蓝牙回调（原有+新增遥控回调）】=====================
 // 原有红方击中回调（未改动）
 static void redNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-  lockedPrintln("[信号] red原始击中信号!");
+  LogUtils::println("[信号] red原始击中信号!");
   led_hit_red();
   FencingCore::getInstance()->setRedHit();
 }
 
 // 原有绿方击中回调（未改动）
 static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-  lockedPrintln("[信号] green原始击中信号!");
+  LogUtils::println("[信号] green原始击中信号!");
   led_hit_green();
   FencingCore::getInstance()->setGreenHit();
 }
@@ -83,13 +63,13 @@ static void greenNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, 
 // 新增：遥控设备数据回调（解析8个按钮指令）
 static void remoteNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
   if (length < 1) {
-    lockedPrintln("[遥控] 无效数据（长度为0）");
+    LogUtils::println("[遥控] 无效数据（长度为0）");
     return;
   }
 
   FencingCore* core = FencingCore::getInstance();
   if (!core) {
-    lockedPrintln("[遥控] FencingCore实例获取失败");
+    LogUtils::println("[遥控] FencingCore实例获取失败");
     return;
   }
 
@@ -97,7 +77,7 @@ static void remoteNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData,
   uint8_t cmd = pData[0];
   switch (cmd) {
     case 0x01: // 对应BTN_NEXT（下一分/计时启停）
-      lockedPrintln("[遥控] 触发[NEXT]按钮");
+      LogUtils::println("[遥控] 触发[NEXT]按钮");
       if (core->isLocked()) {
         core->resetMatch(false);
         if (!core->isTimerRunning()) core->toggleTimerStartPause();
@@ -106,36 +86,36 @@ static void remoteNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData,
       }
       break;
     case 0x02: // 对应BTN_RESET（全局重置）
-      lockedPrintln("[遥控] 触发[RESET]按钮");
+      LogUtils::println("[遥控] 触发[RESET]按钮");
       core->resetMatch(true);
       core->resetTimer();
       break;
     case 0x03: // 对应BTN_PHASE（休息/比赛模式）
-      lockedPrintln("[遥控] 触发[PHASE]按钮");
+      LogUtils::println("[遥控] 触发[PHASE]按钮");
       core->nextPhase();
       break;
     case 0x04: // 对应BTN_MODE（计时时长切换）
-      lockedPrintln("[遥控] 触发[MODE]按钮");
+      LogUtils::println("[遥控] 触发[MODE]按钮");
       core->toggleDurationMode();
       break;
     case 0x05: // 对应BTN_RED_ADD（红方+1）
-      lockedPrintln("[遥控] 触发[红方+1]按钮");
+      LogUtils::println("[遥控] 触发[红方+1]按钮");
       core->addRedScore();
       break;
     case 0x06: // 对应BTN_RED_SUB（红方-1）
-      lockedPrintln("[遥控] 触发[红方-1]按钮");
+      LogUtils::println("[遥控] 触发[红方-1]按钮");
       core->subtractRedScore();
       break;
     case 0x07: // 对应BTN_GREEN_ADD（绿方+1）
-      lockedPrintln("[遥控] 触发[绿方+1]按钮");
+      LogUtils::println("[遥控] 触发[绿方+1]按钮");
       core->addGreenScore();
       break;
     case 0x08: // 对应BTN_GREEN_SUB（绿方-1）
-      lockedPrintln("[遥控] 触发[绿方-1]按钮");
+      LogUtils::println("[遥控] 触发[绿方-1]按钮");
       core->subtractGreenScore();
       break;
     default:
-      lockedPrintf("[遥控] 未知指令码: 0x%02X\n", cmd);
+      LogUtils::printf("[遥控] 未知指令码: 0x%02X\n", cmd);
       break;
   }
 }
@@ -146,17 +126,17 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     String name = advertisedDevice.getName().c_str();
     // 原有重剑设备扫描（未改动）
     if (name == "epee_red" && !redConnected && !doConnectRed) {
-      lockedPrintln("[扫描] 发现red重剑设备!");
+      LogUtils::println("[扫描] 发现red重剑设备!");
       redDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnectRed = true;
     } else if (name == "epee_green" && !greenConnected && !doConnectGreen) {
-      lockedPrintln("[扫描] 发现green重剑设备!");
+      LogUtils::println("[扫描] 发现green重剑设备!");
       greenDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnectGreen = true;
     }
     // 新增：扫描遥控设备
     else if (name == REMOTE_DEVICE_NAME && !remoteConnected && !doConnectRemote) {
-      lockedPrintln("[扫描] 发现遥控设备epee_control!");
+      LogUtils::println("[扫描] 发现遥控设备epee_control!");
       remoteDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnectRemote = true;
     }
@@ -187,7 +167,7 @@ void checkBLEConnectionStatus() {
   // 原有红/绿设备状态检查（未改动）
   if (redConnected && redClient != nullptr) {
     if (!redClient->isConnected()) {
-      lockedPrintln("[蓝牙] red设备已掉线!");
+      LogUtils::println("[蓝牙] red设备已掉线!");
       redConnected = false;
       redClient->disconnect();
       delete redClient;
@@ -196,7 +176,7 @@ void checkBLEConnectionStatus() {
   }
   if (greenConnected && greenClient != nullptr) {
     if (!greenClient->isConnected()) {
-      lockedPrintln("[蓝牙] green设备已掉线!");
+      LogUtils::println("[蓝牙] green设备已掉线!");
       greenConnected = false;
       greenClient->disconnect();
       delete greenClient;
@@ -206,7 +186,7 @@ void checkBLEConnectionStatus() {
   // 新增：遥控设备状态检查
   if (remoteConnected && remoteClient != nullptr) {
     if (!remoteClient->isConnected()) {
-      lockedPrintln("[蓝牙] 遥控设备已掉线!");
+      LogUtils::println("[蓝牙] 遥控设备已掉线!");
       remoteConnected = false;
       remoteClient->disconnect();
       delete remoteClient;
@@ -218,18 +198,18 @@ void checkBLEConnectionStatus() {
 // 扩展：支持自定义服务/特征UUID（适配遥控设备）
 bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteristic*, uint8_t*, size_t, bool), String side, BLEUUID svcUUID, BLEUUID chrUUID) {
   if (target == nullptr) return false;
-  lockedPrintf("[蓝牙] 开始连接%s设备...\n", side.c_str());
+  LogUtils::printf("[蓝牙] 开始连接%s设备...\n", side.c_str());
 
   BLEClient* pClient = BLEDevice::createClient();
   if (!pClient->connect(target)) {
-    lockedPrintf("[蓝牙] %s设备连接失败\n", side.c_str());
+    LogUtils::printf("[蓝牙] %s设备连接失败\n", side.c_str());
     delete pClient;
     return false;
   }
 
   BLERemoteService* pSvc = pClient->getService(svcUUID);
   if (pSvc == nullptr) {
-    lockedPrintf("[蓝牙] %s设备未找到指定服务\n", side.c_str());
+    LogUtils::printf("[蓝牙] %s设备未找到指定服务\n", side.c_str());
     pClient->disconnect();
     delete pClient;
     return false;
@@ -237,7 +217,7 @@ bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteri
 
   BLERemoteCharacteristic* pChar = pSvc->getCharacteristic(chrUUID);
   if (pChar == nullptr) {
-    lockedPrintf("[蓝牙] %s设备未找到指定特征值\n", side.c_str());
+    LogUtils::printf("[蓝牙] %s设备未找到指定特征值\n", side.c_str());
     pClient->disconnect();
     delete pClient;
     return false;
@@ -245,7 +225,7 @@ bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteri
 
   if (pChar->canNotify()) {
     pChar->registerForNotify(cb);
-    lockedPrintf("[蓝牙] %s设备通知已注册成功\n", side.c_str());
+    LogUtils::printf("[蓝牙] %s设备通知已注册成功\n", side.c_str());
   }
 
   // 原有红/绿客户端赋值 + 新增遥控客户端赋值
@@ -262,7 +242,7 @@ bool connectToDevice(BLEAdvertisedDevice* target, void (*cb)(BLERemoteCharacteri
 
 // =====================【多核任务函数（原有逻辑未改动）】=====================
 void TaskLogic(void* pvParameters) {
-  lockedPrintln("[核心1] 逻辑任务已启动");
+  LogUtils::println("[核心1] 逻辑任务已启动");
   FencingCore* core = FencingCore::getInstance();
 
   for (;;) {
@@ -277,7 +257,7 @@ void TaskLogic(void* pvParameters) {
 
 // 蓝牙任务（新增遥控设备连接逻辑）
 void TaskBLE(void* pvParameters) {
-  lockedPrintln("[核心0] 蓝牙任务已启动");
+  LogUtils::println("[核心0] 蓝牙任务已启动");
   for (;;) {
     checkBLEConnectionStatus();
     updateBLEStatusLed();
@@ -326,13 +306,16 @@ void TaskBLE(void* pvParameters) {
 
 // =====================【Arduino 标准入口（未改动）】=====================
 void setup() {
-  Serial.begin(115200);
-   while (!Serial); // 等待串口连接（仅调试用，量产可注释）
+ 
+  // 第一步：初始化日志工具（仅需调用一次，全局生效）
+  if (!LogUtils::init(115200)) {
+    while(1); // 初始化失败，卡死避免后续错误
+  }
+  
 
-
-  lockedPrintln("\n==============================");
-  lockedPrintln("    重剑计分系统 S3 (带计时+遥控) 启动...");
-  lockedPrintln("==============================");
+  LogUtils::println("\n==============================");
+  LogUtils::println("    重剑计分系统 S3 (带计时+遥控) 启动...");
+  LogUtils::println("==============================");
 
   serialMutex = xSemaphoreCreateMutex();
   
@@ -354,7 +337,7 @@ void setup() {
   xTaskCreatePinnedToCore(TaskLogic, "Logic", 8192, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(TaskBLE, "BLE", 8192, NULL, 1, NULL, 0);
 
-  lockedPrintln("[系统] 所有任务已就绪");
+  LogUtils::println("[系统] 所有任务已就绪");
 }
 
 void loop() {

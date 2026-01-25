@@ -1,5 +1,6 @@
 #include "FencingCore.h"
 #include "led_controller.h"
+#include "log_utils.h"
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -60,6 +61,11 @@ void FencingCore::staticScoreChangeCallback(int red, int green, bool isReset) {
 
 // ===================== init方法（修复begin参数）=====================
 void FencingCore::init() {
+
+      // 第一步：初始化日志工具（仅需调用一次，全局生效）
+  if (!LogUtils::init(115200)) {
+    while(1); // 初始化失败，卡死避免后续错误
+  }
     // 初始化引脚（不变）
     pinMode(PIN_RED_LED, OUTPUT);
     pinMode(PIN_GRN_LED, OUTPUT);
@@ -79,7 +85,7 @@ void FencingCore::init() {
 
     // 全局重置（不变）
     resetMatch(true);
-    Serial.println("[FencingCore] 比分+计时+击中判定系统初始化完成");
+    LogUtils::println("[FencingCore] 比分+计时+击中判定系统初始化完成");
 }
 
 // ===================== 新增：8个按钮独立处理函数实现 =====================
@@ -87,21 +93,21 @@ void FencingCore::handleBtnNext() {
     // 防抖（和物理按键逻辑一致）
     vTaskDelay(pdMS_TO_TICKS(50));
     if (m_isLocked) {
-        Serial.println("[按键] 下一分准备 (灭灯)");
+        LogUtils::println("[按键] 下一分准备 (灭灯)");
         resetMatch(false);
         if (!m_fencingTimer.isTimerRunning()) {
             m_fencingTimer.toggleStartPause();
-            Serial.println("[计时] 恢复比赛计时");
+            LogUtils::println("[计时] 恢复比赛计时");
         }
     } else {
         m_fencingTimer.toggleStartPause();
-        Serial.printf("[计时] %s\n", m_fencingTimer.isTimerRunning() ? "开始" : "暂停");
+        LogUtils::printf("[计时] %s\n", m_fencingTimer.isTimerRunning() ? "开始" : "暂停");
     }
 }
 
 void FencingCore::handleBtnReset() {
     vTaskDelay(pdMS_TO_TICKS(50));
-    Serial.println("[按键] 全局重置 (分数+时间)");
+    LogUtils::println("[按键] 全局重置 (分数+时间)");
     resetMatch(true);
     m_fencingTimer.resetTimer();
 }
@@ -109,36 +115,36 @@ void FencingCore::handleBtnReset() {
 void FencingCore::handleBtnPhase() {
     vTaskDelay(pdMS_TO_TICKS(50));
     m_fencingTimer.nextPhase();
-    Serial.println(m_fencingTimer.isResting() ? "[计时] 进入休息模式" : "[计时] 重回比赛模式");
+    LogUtils::println(m_fencingTimer.isResting() ? "[计时] 进入休息模式" : "[计时] 重回比赛模式");
 }
 
 void FencingCore::handleBtnMode() {
     vTaskDelay(pdMS_TO_TICKS(50));
     m_fencingTimer.toggleDurationMode();
-    Serial.printf("[计时] 切换至 %d 分钟赛制\n", m_fencingTimer.getCurrentDurationMode());
+    LogUtils::printf("[计时] 切换至 %d 分钟赛制\n", m_fencingTimer.getCurrentDurationMode());
 }
 
 void FencingCore::handleBtnRedAdd() {
     vTaskDelay(pdMS_TO_TICKS(50));
-    Serial.println("[按键] 手动红方+1分");
+    LogUtils::println("[按键] 手动红方+1分");
     m_scoreManager.addRedScore();
 }
 
 void FencingCore::handleBtnRedSub() {
     vTaskDelay(pdMS_TO_TICKS(50));
-    Serial.println("[按键] 手动红方-1分");
+    LogUtils::println("[按键] 手动红方-1分");
     m_scoreManager.subtractRedScore();
 }
 
 void FencingCore::handleBtnGreenAdd() {
     vTaskDelay(pdMS_TO_TICKS(50));
-    Serial.println("[按键] 手动绿方+1分");
+    LogUtils::println("[按键] 手动绿方+1分");
     m_scoreManager.addGreenScore();
 }
 
 void FencingCore::handleBtnGreenSub() {
     vTaskDelay(pdMS_TO_TICKS(50));
-    Serial.println("[按键] 手动绿方-1分");
+    LogUtils::println("[按键] 手动绿方-1分");
     m_scoreManager.subtractGreenScore();
 }
 
@@ -242,7 +248,7 @@ void FencingCore::handleHitEffects() {
         digitalWrite(PIN_RED_LED, LOW);
         digitalWrite(PIN_GRN_LED, LOW);
         m_effectActive = false;
-        Serial.println("[系统] 声光效果结束，等待重置");
+        LogUtils::println("[系统] 声光效果结束，等待重置");
     }
 }
 
@@ -250,7 +256,7 @@ void FencingCore::setRedHit() {
     if (!m_isLocked) {
         m_redHitRaw = true;
         m_redHitTimestamp = millis();
-        Serial.printf("[信号] red击中信号触发 时间戳: %u\n", m_redHitTimestamp);
+        LogUtils::printf("[信号] red击中信号触发 时间戳: %u\n", m_redHitTimestamp);
     }
 }
 
@@ -258,7 +264,7 @@ void FencingCore::setGreenHit() {
     if (!m_isLocked) {
         m_greenHitRaw = true;
         m_greenHitTimestamp = millis();
-        Serial.printf("[信号] green击中信号触发 时间戳: %u\n", m_greenHitTimestamp);
+        LogUtils::printf("[信号] green击中信号触发 时间戳: %u\n", m_greenHitTimestamp);
     }
 }
 
@@ -277,17 +283,17 @@ void FencingCore::resetMatch(bool total) {
 
     int red = m_scoreManager.getRedScore();
     int green = m_scoreManager.getGreenScore();
-    Serial.printf("[系统] %s | 比分: 红%d - 绿%d\n", total ? "全部重置" : "下一分开始", red, green);
+    LogUtils::printf("[系统] %s | 比分: 红%d - 绿%d\n", total ? "全部重置" : "下一分开始", red, green);
 }
 
 void FencingCore::onScoreChanged(int redScore, int greenScore, bool isReset) {
     if (isReset) {
-        Serial.printf("[比分回调] 分数重置 | 红%d - 绿%d\n", redScore, greenScore);
+        LogUtils::printf("[比分回调] 分数重置 | 红%d - 绿%d\n", redScore, greenScore);
         m_scoreDisplay.begin();
         m_scoreDisplay.setScore(redScore, greenScore);
         m_fencingTimer.resetTimer();
     } else {
-        Serial.printf("[比分回调] 分数更新 | 红%d - 绿%d\n", redScore, greenScore);
+        LogUtils::printf("[比分回调] 分数更新 | 红%d - 绿%d\n", redScore, greenScore);
         m_scoreDisplay.setScore(redScore, greenScore);
     }
 }
@@ -306,18 +312,18 @@ void FencingCore::evaluateHit() {
         m_scoreManager.addBothScores();
         digitalWrite(PIN_RED_LED, HIGH);
         digitalWrite(PIN_GRN_LED, HIGH);
-        Serial.printf("[裁判] 双方同时击中! (时间差: %d 毫秒)\n", abs((int)(m_redHitTimestamp - m_greenHitTimestamp)));
+        LogUtils::printf("[裁判] 双方同时击中! (时间差: %d 毫秒)\n", abs((int)(m_redHitTimestamp - m_greenHitTimestamp)));
     } else if (m_redHitReceived) {
         m_scoreManager.addRedScore();
         digitalWrite(PIN_RED_LED, HIGH);
-        Serial.println("[裁判] red得分");
+        LogUtils::println("[裁判] red得分");
     } else if (m_greenHitReceived) {
         m_scoreManager.addGreenScore();
         digitalWrite(PIN_GRN_LED, HIGH);
-        Serial.println("[裁判] green得分");
+        LogUtils::println("[裁判] green得分");
     }
     
     int red = m_scoreManager.getRedScore();
     int green = m_scoreManager.getGreenScore();
-    Serial.printf("[比分] red %d : %d green\n", red, green);
+    LogUtils::printf("[比分] red %d : %d green\n", red, green);
 }
