@@ -4,14 +4,14 @@
 #include <BLE2902.h>  // BLE2902头文件（兼容旧版库）
 
 // ===================== 硬件配置 =====================
-#define BTN_NEXT      3   
-#define BTN_RESET     4  
-#define BTN_PHASE     5   
-#define BTN_MODE      6   
-#define BTN_RED_ADD   7   
-#define BTN_RED_SUB   9   
-#define BTN_GREEN_ADD 1   
-#define BTN_GREEN_SUB 2   
+#define BTN_NEXT      21   
+#define BTN_RESET     20  
+#define BTN_PHASE     1   
+#define BTN_MODE      2   
+#define BTN_RED_ADD   5   
+#define BTN_RED_SUB   6   
+#define BTN_GREEN_ADD 4   
+#define BTN_GREEN_SUB 3   
 
 #define DEBOUNCE_DELAY 50 // 防抖滤出时间 (ms)
 
