@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project>
+  <fileVersion>
+    <major>5</major>
+    <minor>10</minor>
+    <build>0</build>
+  </fileVersion>
+  <title>epee</title>
+  <author>fzh</author>
+  <width value="30.0" unit="cm"/>
+  <height value="30.0" unit="cm"/>
+  <gridSpacing value="0.1" unit="in"/>
+  <dotSpacing>1</dotSpacing>
+  <components>
+    <diylc.boards.PerfBoard>
+      <id>2170c1d7-9fbb-45ca-b931-103c81210004</id>
+      <name>Board3</name>
+      <alpha>127</alpha>
+      <value></value>
+      <controlPoints>
+        <point x="0.8" y="3.7"/>
+        <point x="3.9" y="7.0"/>
+      </controlPoints>
+      <firstPoint x="0.8" y="3.7"/>
+      <secondPoint x="3.9" y="7.0"/>
+      <boardColor hex="f8ebb3"/>
+      <borderColor hex="ada47d"/>
+      <coordinateColor hex="b6b6b6"/>
+      <xType>Numbers</xType>
+      <coordinateOrigin>Top_Left</coordinateOrigin>
+      <coordinateDisplay>One_Side</coordinateDisplay>
+      <yType>Letters</yType>
+      <mode>TwoPoints</mode>
+      <boardUndersideDisplay>NONE</boardUndersideDisplay>
+      <undersideOffset value="0.1" unit="in"/>
+      <undersideTransparency>true</undersideTransparency>
+      <spacing value="0.1" unit="in"/>
+      <padColor hex="da8a67"/>
+    </diylc.boards.PerfBoard>
+    <diylc.semiconductors.DIL__IC>
+      <id>df49d09c-c6c2-4091-a292-6ecfaa474c4e</id>
+      <name>ESP32-S3</name>
+      <alpha>127</alpha>
+      <fontSizeOverride>25</fontSizeOverride>
+      <value></value>
+      <orientation>DEFAULT</orientation>
+      <pinCount>_44</pinCount>
+      <pinSpacing value="0.1" unit="in"/>
+      <rowSpacing value="1.0" unit="in"/>
+      <controlPoints>
+        <point x="1.8000000000000003" y="4.0"/>
+        <point x="1.8000000000000003" y="4.1"/>
+        <point x="1.8000000000000003" y="4.199999999999999"/>
+        <point x="1.8000000000000003" y="4.3"/>
+        <point x="1.8000000000000003" y="4.4"/>
+        <point x="1.8000000000000003" y="4.500000000000001"/>
+        <point x="1.8000000000000003" y="4.6"/>
+        <point x="1.8000000000000003" y="4.699999999999999"/>
+        <point x="1.8000000000000003" y="4.8"/>
+        <point x="1.8000000000000003" y="4.9"/>
+        <point x="1.8000000000000003" y="5.0"/>
+        <point x="1.8000000000000003" y="5.1"/>
+        <point x="1.8000000000000003" y="5.2"/>
+        <point x="1.8000000000000003" y="5.3"/>
+        <point x="1.8000000000000003" y="5.4"/>
+        <point x="1.8000000000000003" y="5.5"/>
+        <point x="1.8000000000000003" y="5.6"/>
+        <point x="1.8000000000000003" y="5.7"/>
+        <point x="1.8000000000000003" y="5.8"/>
+        <point x="1.8000000000000003" y="5.9"/>
+        <point x="1.8000000000000003" y="6.0"/>
+        <point x="1.8000000000000003" y="6.1"/>
+        <point x="2.8" y="4.0"/>
+        <point x="2.8" y="4.1"/>
+        <point x="2.8" y="4.199999999999999"/>
+        <point x="2.8" y="4.3"/>
+        <point x="2.8" y="4.4"/>
+        <point x="2.8" y="4.500000000000001"/>
+        <point x="2.8" y="4.6"/>
+        <point x="2.8" y="4.699999999999999"/>
+        <point x="2.8" y="4.8"/>
+        <point x="2.8" y="4.9"/>
+        <point x="2.8" y="5.0"/>
+        <point x="2.8" y="5.1"/>
+        <point x="2.8" y="5.2"/>
+        <point x="2.8" y="5.3"/>
+        <point x="2.8" y="5.4"/>
+        <point x="2.8" y="5.5"/>
+        <point x="2.8" y="5.6"/>
+        <point x="2.8" y="5.7"/>
+        <point x="2.8" y="5.8"/>
+        <point x="2.8" y="5.9"/>
+        <point x="2.8" y="6.0"/>
+        <point x="2.8" y="6.1"/>
+      </controlPoints>
+      <display>BOTH</display>
+      <bodyColor hex="808080"/>
+      <borderColor hex="595959"/>
+      <labelColor hex="ffffff"/>
+      <indentColor hex="595959"/>
+      <displayNumbers>NO</displayNumbers>
+    </diylc.semiconductors.DIL__IC>
+    <diylc.shapes.Rectangle>
+      <id>a507de41-d8a8-46d7-8e35-fc99dc85542f</id>
+      <name>type-c</name>
+      <alpha>127</alpha>
+      <value></value>
+      <controlPoints>
+        <point x="2.175" y="3.985"/>
+        <point x="2.475" y="4.285"/>
+      </controlPoints>
+      <firstPoint x="2.175" y="3.985"/>
+      <secondPoint x="2.475" y="4.285"/>
+      <color hex="3333ff"/>
+      <borderColor hex="000000"/>
+      <borderThickness value="1.0" unit="mm"/>
+      <length value="7.62" unit="mm"/>
+      <width value="7.62" unit="mm"/>
+      <mode>TwoPoints</mode>
+      <edgeRadius value="0.0" unit="mm"/>
+    </diylc.shapes.Rectangle>
+    <diylc.semiconductors.LED>
+      <id>109585b5-d3db-4b03-b5ea-d48ddc823b03</id>
+      <name>D1</name>
+      <alpha>127</alpha>
+      <length value="5.0" unit="mm"/>
+      <width value="5.0" unit="mm"/>
+      <points>
+        <point x="2.0" y="6.5"/>
+        <point x="2.2" y="6.5"/>
+        <point x="2.1" y="6.5"/>
+      </points>
+      <bodyColor hex="5dfc0a"/>
+      <borderColor hex="41b007"/>
+      <labelColor hex="000000"/>
+      <leadColor hex="cccccc"/>
+      <display>NAME</display>
+      <flipStanding>false</flipStanding>
+      <labelOriantation>Directional</labelOriantation>
+      <moveLabel>false</moveLabel>
+      <hideShortLeads>false</hideShortLeads>
+      <value></value>
+    </diylc.semiconductors.LED>
+    <diylc.misc.Label>
+      <id>ae47bb01-c982-4887-8e62-c3fbc0de2aea</id>
+      <name>LAB1</name>
+      <point x="1.9" y="5.055"/>
+      <text>3V3&lt;br&gt;3V3&lt;br&gt;RST&lt;br&gt;4&lt;br&gt;5&lt;br&gt;6&lt;br&gt;7&lt;br&gt;15&lt;br&gt;16&lt;br&gt;17&lt;br&gt;18&lt;br&gt;8&lt;br&gt;3&lt;br&gt;46&lt;br&gt;9&lt;br&gt;10&lt;br&gt;11&lt;br&gt;12&lt;br&gt;13&lt;br&gt;14&lt;br&gt;5Vin&lt;br&gt;GND</text>
+      <font name="Arial Black" size="13" style="1"/>
+      <color hex="ff0066"/>
+      <horizontalAlignment>CENTER</horizontalAlignment>
+      <verticalAlignment>CENTER</verticalAlignment>
+      <orientation>DEFAULT</orientation>
+    </diylc.misc.Label>
+    <diylc.misc.Label>
+      <id>ae47bb01-c982-4887-8e62-c3fbc0de2aea</id>
+      <name>LAB2</name>
+      <point x="2.7" y="5.06"/>
+      <text>GND&lt;br&gt;TX&lt;br&gt;RX&lt;br&gt;1&lt;br&gt;2&lt;br&gt;42&lt;br&gt;41&lt;br&gt;40&lt;br&gt;39&lt;br&gt;38&lt;br&gt;37&lt;br&gt;36&lt;br&gt;35&lt;br&gt;0&lt;br&gt;45&lt;br&gt;48&lt;br&gt;47&lt;br&gt;21&lt;br&gt;20&lt;br&gt;19&lt;br&gt;GND&lt;br&gt;GND</text>
+      <font reference="../../diylc.misc.Label/font"/>
+      <color hex="ff0066"/>
+      <horizontalAlignment>CENTER</horizontalAlignment>
+      <verticalAlignment>CENTER</verticalAlignment>
+      <orientation>DEFAULT</orientation>
+    </diylc.misc.Label>
+  </components>
+  <groups/>
+  <groupsEx>
+    <group>
+      <componentIds>
+        <uuid>df49d09c-c6c2-4091-a292-6ecfaa474c4e</uuid>
+        <uuid>ae47bb01-c982-4887-8e62-c3fbc0de2aea</uuid>
+        <uuid>a507de41-d8a8-46d7-8e35-fc99dc85542f</uuid>
+      </componentIds>
+      <name>s3</name>
+    </group>
+  </groupsEx>
+  <lockedLayers/>
+  <lockedComponents/>
+  <hiddenLayers/>
+  <font name="Dialog.plain" size="14" style="0"/>
+</project>
