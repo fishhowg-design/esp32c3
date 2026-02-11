@@ -16,8 +16,7 @@ const int FencingCore::BTN_RED_ADD = 14;
 const int FencingCore::BTN_RED_SUB = 9;
 const int FencingCore::BTN_GREEN_ADD = 17;
 const int FencingCore::BTN_GREEN_SUB = 18;
-const int FencingCore::TIMER_CLK_PIN = 1;
-const int FencingCore::TIMER_DIO_PIN = 2;
+
 
 const unsigned long FencingCore::LIGHT_DURATION = 3000;
 const unsigned long FencingCore::BEEP_DURATION = 800;
