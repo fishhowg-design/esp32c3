@@ -17,6 +17,13 @@ const int PIN_BTN_RED_ADD = 14;
 const int PIN_BTN_RED_SUB = 9;
 const int PIN_BTN_GREEN_ADD = 17;
 const int PIN_BTN_GREEN_SUB = 18;
+// FencingTimer TM1637 pins and duration presets (moved from FencingTimer.h)
+const int FT_TM1637_DIO_PIN = 10;
+const int FT_TM1637_CLK_PIN = 11;
+
+const int DURATION_FIE = 180;
+const int DURATION_TRAINING = 300;
+const int DURATION_REST = 60;
 
 // =====================【多核任务函数（原有逻辑未改动）】=====================
 void TaskLogic(void* pvParameters) {
@@ -66,6 +73,13 @@ void setup() {
   FencingCore::PIN_BTN_RED_SUB = PIN_BTN_RED_SUB;
   FencingCore::PIN_BTN_GREEN_ADD = PIN_BTN_GREEN_ADD;
   FencingCore::PIN_BTN_GREEN_SUB = PIN_BTN_GREEN_SUB;
+
+    // 将 TM1637 及时长常量赋值给 FencingTimer 的静态变量（使用 FT_ 前缀避免与宏冲突）
+    FencingTimer::FT_TM1637_DIO_PIN = TM1637_DIO_PIN;
+    FencingTimer::FT_TM1637_CLK_PIN = TM1637_CLK_PIN;
+    FencingTimer::FT_DURATION_FIE = DURATION_FIE;
+    FencingTimer::FT_DURATION_TRAINING = DURATION_TRAINING;
+    FencingTimer::FT_DURATION_REST = DURATION_REST;
 
   LogUtils::println("[主程序]完成逻辑核心初始化");
   FencingCore::getInstance()->init();

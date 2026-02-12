@@ -1,14 +1,22 @@
 #include "FencingTimer.h"
 
-FencingTimer::FencingTimer() 
-  : display(TM1637_CLK_PIN, TM1637_DIO_PIN), 
-    isRunning(false), 
-    isRestMode(false), 
-    lastTick(0),
-    currentMaxDuration(DURATION_FIE) 
+// 静态变量默认值（可被 .ino 在 setup 中覆盖）
+int FencingTimer::FT_TM1637_DIO_PIN = 10;
+int FencingTimer::FT_TM1637_CLK_PIN = 11;
+
+int FencingTimer::FT_DURATION_FIE = 180;
+int FencingTimer::FT_DURATION_TRAINING = 300;
+int FencingTimer::FT_DURATION_REST = 60;
+
+FencingTimer::FencingTimer()
+    : display(FencingTimer::FT_TM1637_CLK_PIN, FencingTimer::FT_TM1637_DIO_PIN),
+        isRunning(false),
+        isRestMode(false),
+        lastTick(0),
+        currentMaxDuration(FencingTimer::FT_DURATION_FIE)
 {
-    remainingSeconds = currentMaxDuration;
-    savedMatchSeconds = currentMaxDuration; // 初始化断点
+        remainingSeconds = currentMaxDuration;
+        savedMatchSeconds = currentMaxDuration; // 初始化断点
 }
 
 void FencingTimer::begin() {
@@ -43,10 +51,10 @@ void FencingTimer::resetTimer() {
     isRunning = false;
     // 重置逻辑：如果是休息中重置，回到60秒；如果是比赛中重置，回到完整局时长
     if (isRestMode) {
-        remainingSeconds = DURATION_REST;
+        remainingSeconds = FencingTimer::FT_DURATION_REST;
     } else {
         remainingSeconds = currentMaxDuration;
-        savedMatchSeconds = currentMaxDuration; 
+        savedMatchSeconds = currentMaxDuration;
     }
     refreshDisplay();
 }
@@ -56,9 +64,9 @@ void FencingTimer::nextPhase() {
     if (!isRestMode) {
         // --- 离开比赛，进入休息 ---
         savedMatchSeconds = remainingSeconds; // 核心：保存当前比赛还没跑完的时间
-        
+
         isRestMode = true;
-        remainingSeconds = DURATION_REST;
+        remainingSeconds = FencingTimer::FT_DURATION_REST;
         isRunning = true; // 休息自动开始
         lastTick = millis();
     } else {
@@ -81,10 +89,10 @@ void FencingTimer::nextPhase() {
 void FencingTimer::toggleDurationMode() {
     if (isRestMode) isRestMode = false;
 
-    if (currentMaxDuration == DURATION_FIE) {
-        currentMaxDuration = DURATION_TRAINING;
+    if (currentMaxDuration == FencingTimer::FT_DURATION_FIE) {
+        currentMaxDuration = FencingTimer::FT_DURATION_TRAINING;
     } else {
-        currentMaxDuration = DURATION_FIE;
+        currentMaxDuration = FencingTimer::FT_DURATION_FIE;
     }
     
     // 切换模式意味着彻底重赛

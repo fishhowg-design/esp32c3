@@ -4,15 +4,17 @@
 #include <TM1637Display.h>
 #include <Arduino.h>
 
-#define TM1637_DIO_PIN 10
-#define TM1637_CLK_PIN 11
-
-#define DURATION_FIE 180
-#define DURATION_TRAINING 300
-#define DURATION_REST 60
-
+// 这些将在 .ino 中定义并在运行时赋值到下面的静态变量
 class FencingTimer {
 public:
+  // 使用不同的标识避免与宏冲突
+  static int FT_TM1637_DIO_PIN;
+  static int FT_TM1637_CLK_PIN;
+
+  static int FT_DURATION_FIE;
+  static int FT_DURATION_TRAINING;
+  static int FT_DURATION_REST;
+
   FencingTimer();
   void begin();
   void update();
