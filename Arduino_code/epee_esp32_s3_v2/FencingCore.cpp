@@ -4,18 +4,20 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-// ===================== 常量初始化（不变）=====================
-const int FencingCore::PIN_RED_LED = 4;
-const int FencingCore::PIN_GRN_LED = 5;
-const int FencingCore::PIN_BUZZER = 3;
-const int FencingCore::BTN_NEXT = 7;
-const int FencingCore::BTN_RESET = 6;
-const int FencingCore::BTN_PHASE = 15;
-const int FencingCore::BTN_MODE = 16;
-const int FencingCore::BTN_RED_ADD = 14;
-const int FencingCore::BTN_RED_SUB = 9;
-const int FencingCore::BTN_GREEN_ADD = 17;
-const int FencingCore::BTN_GREEN_SUB = 18;
+// ===================== 引脚静态变量定义（默认0，setup 中会赋值）=====================
+int FencingCore::PIN_LED_RED = 0;
+int FencingCore::PIN_LED_GREEN = 0;
+int FencingCore::PIN_BUZZER = 0;
+int FencingCore::PIN_BTN_NEXT = 0;
+int FencingCore::PIN_BTN_RESET = 0;
+int FencingCore::PIN_BTN_PHASE = 0;
+int FencingCore::PIN_BTN_MODE = 0;
+int FencingCore::PIN_BTN_RED_ADD = 0;
+int FencingCore::PIN_BTN_RED_SUB = 0;
+int FencingCore::PIN_BTN_GREEN_ADD = 0;
+int FencingCore::PIN_BTN_GREEN_SUB = 0;
+int FencingCore::PIN_TIMER_CLK = 0;
+int FencingCore::PIN_TIMER_DIO = 0;
 
 
 const unsigned long FencingCore::LIGHT_DURATION = 3000;
@@ -66,17 +68,17 @@ void FencingCore::init() {
     while(1); // 初始化失败，卡死避免后续错误
   }
     // 初始化引脚（不变）
-    pinMode(PIN_RED_LED, OUTPUT);
-    pinMode(PIN_GRN_LED, OUTPUT);
+    pinMode(PIN_LED_RED, OUTPUT);
+    pinMode(PIN_LED_GREEN, OUTPUT);
     pinMode(PIN_BUZZER, OUTPUT);
-    pinMode(BTN_NEXT, INPUT_PULLUP);
-    pinMode(BTN_RESET, INPUT_PULLUP);
-    pinMode(BTN_PHASE, INPUT_PULLUP);
-    pinMode(BTN_MODE, INPUT_PULLUP);
-    pinMode(BTN_RED_ADD, INPUT_PULLUP);
-    pinMode(BTN_RED_SUB, INPUT_PULLUP);
-    pinMode(BTN_GREEN_ADD, INPUT_PULLUP);
-    pinMode(BTN_GREEN_SUB, INPUT_PULLUP);
+    pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
+    pinMode(PIN_BTN_RESET, INPUT_PULLUP);
+    pinMode(PIN_BTN_PHASE, INPUT_PULLUP);
+    pinMode(PIN_BTN_MODE, INPUT_PULLUP);
+    pinMode(PIN_BTN_RED_ADD, INPUT_PULLUP);
+    pinMode(PIN_BTN_RED_SUB, INPUT_PULLUP);
+    pinMode(PIN_BTN_GREEN_ADD, INPUT_PULLUP);
+    pinMode(PIN_BTN_GREEN_SUB, INPUT_PULLUP);
 
     // 初始化显示和计时器（修复：移除多余的引脚参数）
     m_scoreDisplay.begin();
@@ -153,38 +155,38 @@ void FencingCore::checkButtons() {
     static bool lastRedAdd = HIGH, lastRedSub = HIGH, lastGreenAdd = HIGH, lastGreenSub = HIGH;
 
     // BTN_NEXT
-    bool currNext = digitalRead(BTN_NEXT);
+    bool currNext = digitalRead(PIN_BTN_NEXT);
     if (lastNext == HIGH && currNext == LOW) {
         handleBtnNext(); // 调用封装的函数
     }
     lastNext = currNext;
 
     // BTN_RESET
-    bool currReset = digitalRead(BTN_RESET);
+    bool currReset = digitalRead(PIN_BTN_RESET);
     if (lastReset == HIGH && currReset == LOW) {
         handleBtnReset(); // 调用封装的函数
     }
     lastReset = currReset;
 
     // BTN_PHASE
-    bool currPhase = digitalRead(BTN_PHASE);
+    bool currPhase = digitalRead(PIN_BTN_PHASE);
     if (lastPhase == HIGH && currPhase == LOW) {
         handleBtnPhase(); // 调用封装的函数
     }
     lastPhase = currPhase;
 
     // BTN_MODE
-    bool currMode = digitalRead(BTN_MODE);
+    bool currMode = digitalRead(PIN_BTN_MODE);
     if (lastMode == HIGH && currMode == LOW) {
         handleBtnMode(); // 调用封装的函数
     }
     lastMode = currMode;
 
     // 手动加减分
-    bool currRedAdd = digitalRead(BTN_RED_ADD);
-    bool currRedSub = digitalRead(BTN_RED_SUB);
-    bool currGreenAdd = digitalRead(BTN_GREEN_ADD);
-    bool currGreenSub = digitalRead(BTN_GREEN_SUB);
+    bool currRedAdd = digitalRead(PIN_BTN_RED_ADD);
+    bool currRedSub = digitalRead(PIN_BTN_RED_SUB);
+    bool currGreenAdd = digitalRead(PIN_BTN_GREEN_ADD);
+    bool currGreenSub = digitalRead(PIN_BTN_GREEN_SUB);
 
     if (lastRedAdd == HIGH && currRedAdd == LOW) {
         handleBtnRedAdd(); // 调用封装的函数
@@ -244,8 +246,8 @@ void FencingCore::handleHitEffects() {
     unsigned long elapsed = millis() - m_hitEffectStartTime;
     if (elapsed > BEEP_DURATION) digitalWrite(PIN_BUZZER, LOW);
     if (elapsed > LIGHT_DURATION) {
-        digitalWrite(PIN_RED_LED, LOW);
-        digitalWrite(PIN_GRN_LED, LOW);
+        digitalWrite(PIN_LED_RED, LOW);
+        digitalWrite(PIN_LED_GREEN, LOW);
         m_effectActive = false;
         LogUtils::println("[系统] 声光效果结束，等待重置");
     }
@@ -275,8 +277,8 @@ void FencingCore::resetMatch(bool total) {
     m_firstHitTime = 0;
     m_redHitRaw = false;
     m_greenHitRaw = false;
-    digitalWrite(PIN_RED_LED, LOW);
-    digitalWrite(PIN_GRN_LED, LOW);
+    digitalWrite(PIN_LED_RED, LOW);
+    digitalWrite(PIN_LED_GREEN, LOW);
     digitalWrite(PIN_BUZZER, LOW);
     m_effectActive = false;
 
@@ -309,16 +311,16 @@ void FencingCore::evaluateHit() {
 
     if (m_redHitReceived && m_greenHitReceived) {
         m_scoreManager.addBothScores();
-        digitalWrite(PIN_RED_LED, HIGH);
-        digitalWrite(PIN_GRN_LED, HIGH);
+        digitalWrite(PIN_LED_RED, HIGH);
+        digitalWrite(PIN_LED_GREEN, HIGH);
         LogUtils::printf("[裁判] 双方同时击中! (时间差: %d 毫秒)\n", abs((int)(m_redHitTimestamp - m_greenHitTimestamp)));
     } else if (m_redHitReceived) {
         m_scoreManager.addRedScore();
-        digitalWrite(PIN_RED_LED, HIGH);
+        digitalWrite(PIN_LED_RED, HIGH);
         LogUtils::println("[裁判] red得分");
     } else if (m_greenHitReceived) {
         m_scoreManager.addGreenScore();
-        digitalWrite(PIN_GRN_LED, HIGH);
+        digitalWrite(PIN_LED_GREEN, HIGH);
         LogUtils::println("[裁判] green得分");
     }
     

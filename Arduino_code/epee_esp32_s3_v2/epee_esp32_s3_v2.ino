@@ -3,8 +3,20 @@
 #include "FencingCore.h" // 仅引入封装类，无其他依赖
 #include "log_utils.h"
 
-// LED 与板载指示灯
+// LED 与板载/外设引脚常量（规范化命名并集中在此）
 const int LED_BOARD = 8;
+// FencingCore 相关引脚（按组命名：PIN_LED_ / PIN_BTN_ / PIN_TIMER_）
+const int PIN_LED_RED = 4;
+const int PIN_LED_GREEN = 5;
+const int PIN_BUZZER = 3;
+const int PIN_BTN_NEXT = 7;
+const int PIN_BTN_RESET = 6;
+const int PIN_BTN_PHASE = 15;
+const int PIN_BTN_MODE = 16;
+const int PIN_BTN_RED_ADD = 14;
+const int PIN_BTN_RED_SUB = 9;
+const int PIN_BTN_GREEN_ADD = 17;
+const int PIN_BTN_GREEN_SUB = 18;
 
 // =====================【多核任务函数（原有逻辑未改动）】=====================
 void TaskLogic(void* pvParameters) {
@@ -41,6 +53,19 @@ void setup() {
   
   //蓝牙处理线程启动
   BluetoothManager::getInstance()->start();
+
+  // 在调用 FencingCore::init() 前赋值引脚（将类中的常量迁移到 .ino）
+  FencingCore::PIN_LED_RED = PIN_LED_RED;
+  FencingCore::PIN_LED_GREEN = PIN_LED_GREEN;
+  FencingCore::PIN_BUZZER = PIN_BUZZER;
+  FencingCore::PIN_BTN_NEXT = PIN_BTN_NEXT;
+  FencingCore::PIN_BTN_RESET = PIN_BTN_RESET;
+  FencingCore::PIN_BTN_PHASE = PIN_BTN_PHASE;
+  FencingCore::PIN_BTN_MODE = PIN_BTN_MODE;
+  FencingCore::PIN_BTN_RED_ADD = PIN_BTN_RED_ADD;
+  FencingCore::PIN_BTN_RED_SUB = PIN_BTN_RED_SUB;
+  FencingCore::PIN_BTN_GREEN_ADD = PIN_BTN_GREEN_ADD;
+  FencingCore::PIN_BTN_GREEN_SUB = PIN_BTN_GREEN_SUB;
 
   LogUtils::println("[主程序]完成逻辑核心初始化");
   FencingCore::getInstance()->init();

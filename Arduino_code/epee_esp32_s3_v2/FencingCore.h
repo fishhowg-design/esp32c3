@@ -8,20 +8,23 @@
 
 class FencingCore {
 public:
-    // ===================== 常量定义（不变）=====================
-    static const int PIN_RED_LED;
-    static const int PIN_GRN_LED;
-    static const int PIN_BUZZER;
-    static const int BTN_NEXT;
-    static const int BTN_RESET;
-    static const int BTN_PHASE;
-    static const int BTN_MODE;
-    static const int BTN_RED_ADD;
-    static const int BTN_RED_SUB;
-    static const int BTN_GREEN_ADD;
-    static const int BTN_GREEN_SUB;
-    static const int TIMER_CLK_PIN;
-    static const int TIMER_DIO_PIN;
+    // ===================== 引脚配置（可在运行时赋值）命名已规范化：
+    // LED 类引脚
+    static int PIN_LED_RED;
+    static int PIN_LED_GREEN;
+    static int PIN_BUZZER;
+    // 按键类引脚
+    static int PIN_BTN_NEXT;
+    static int PIN_BTN_RESET;
+    static int PIN_BTN_PHASE;
+    static int PIN_BTN_MODE;
+    static int PIN_BTN_RED_ADD;
+    static int PIN_BTN_RED_SUB;
+    static int PIN_BTN_GREEN_ADD;
+    static int PIN_BTN_GREEN_SUB;
+    // 计时器/外设线
+    static int PIN_TIMER_CLK;
+    static int PIN_TIMER_DIO;
 
     static const unsigned long LIGHT_DURATION;
     static const unsigned long BEEP_DURATION;
